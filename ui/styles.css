@@ -678,7 +678,15 @@ svg {
 }
 
 #view-home {
-  padding: 22px 24px 12px;
+  /* 首页头部间距调节区：顶部留白、标题块高度、标题组到输入行、副标题外边距。 */
+  --home-head-min-height: 48px;
+  --home-hint-gap: 12px;
+  --home-subtitle-margin: 3px 0;
+  padding: 14px 24px 12px;
+}
+
+#view-home .home-subtitle {
+  margin: var(--home-subtitle-margin);
 }
 
 #view-home .home-stage {
@@ -691,7 +699,7 @@ svg {
 
 #view-home .home-head {
   position: relative;
-  min-height: 76px;
+  min-height: var(--home-head-min-height);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -827,7 +835,7 @@ svg {
   flex-direction: column;
   align-items: stretch;
   gap: 8px;
-  margin-top: 4px;
+  margin-top: var(--home-hint-gap);
   padding: 0;
 }
 
