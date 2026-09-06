@@ -1846,6 +1846,14 @@ svg {
   background: rgba(0, 0, 0, 0.025);
 }
 
+/* 仅浅色播放行：提高优先级，避免普通行灰底覆盖 --accent-dim。 */
+:root[data-theme="light"] #view-home .ranking-list .track-row:has(.track[aria-current="true"]),
+:root[data-theme="light"] #view-search #search-results .track-row:has(.track[aria-current="true"]),
+:root[data-theme="light"] #view-favorites #favorites-list .track-row:has(.track[aria-current="true"]),
+:root[data-theme="light"] #view-playlists #playlist-tracks .track-row:has(.track[aria-current="true"]) {
+  background: var(--accent-dim);
+}
+
 :root[data-theme="image"] #view-favorites .list-head,
 :root[data-theme="image"] #view-playlists .list-head,
 :root[data-theme="image"] #view-favorites #favorites-list,
