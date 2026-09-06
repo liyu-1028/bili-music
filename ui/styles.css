@@ -40,10 +40,12 @@
 :root[data-theme="light"] {
   color-scheme: light;
   --text-1: #1c1c1e;
+  /* 白底文字：text-2 已达 5.07:1；text-3 加深至约 4.78:1，仍略轻于 text-2。 */
   --text-2: #6e6e73;
-  --text-3: #a0a0a5;
+  --text-3: #727278;
   --panel: #ffffff;
-  --line: rgba(0, 0, 0, 0.09);
+  /* 普通边界加强至 12%，仍弱于 line-strong 的 14%。 */
+  --line: rgba(0, 0, 0, 0.12);
   --search-bg: rgba(0, 0, 0, 0.04);
   --track-hover: rgba(0, 0, 0, 0.035);
   --nav-hover: rgba(0, 0, 0, 0.04);
@@ -51,9 +53,11 @@
   --track-line: rgba(0, 0, 0, 0.1);
   --play-btn-bg: #1c1c1e;
   --play-btn-fg: #ffffff;
-  --panel-raised: rgba(0, 0, 0, 0.025);
+  /* 内层表面用 4% 灰，与白面板区分；保留既有 hover / 选中规则。 */
+  --panel-raised: rgba(0, 0, 0, 0.04);
   --line-strong: rgba(0, 0, 0, 0.14);
-  --shadow: 0 18px 44px rgba(0, 0, 0, 0.1);
+  /* 阴影仅加强透明度至 16%，不改变原有偏移与模糊范围。 */
+  --shadow: 0 18px 44px rgba(0, 0, 0, 0.16);
 }
 
 :root[data-theme="image"] {
@@ -116,7 +120,8 @@ body::after {
 }
 
 :root[data-theme="light"] body::before {
-  background: #e8e8ea;
+  /* 外层灰底加深，与固定白色面板拉开层次。 */
+  background: #d8d8dd;
 }
 
 :root[data-theme="image"] body::before {
