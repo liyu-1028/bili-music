@@ -3,10 +3,12 @@ name: Release
 # 跨平台产物自动构建流水线（Windows + macOS）：
 #
 # 触发方式：
-# - push 到 master（PR 合并后自动触发）：按 tauri.conf.json 的版本号创建/更新 Draft Release，
-#   不会触碰已正式发布的版本
 # - push tag v*（显式发版/重建）：校验 tag 与配置版本一致后构建并上传（允许覆盖产物）
-# - workflow_dispatch：手动触发，等同 master push
+# - workflow_dispatch：按 tauri.conf.json 的版本号创建/更新 Draft Release
+#
+# 上传保护：
+# - 非 tag 触发遇到已正式发布的版本时只验证、不上传
+# - Release 不存在时允许首次创建；状态查询失败时终止流程，不在状态未知时上传
 #
 # 产物（命名沿用既有发布规范）：
 # - Bili-Music-v{版本}-windows-x64.zip（zip 根目录单个 bili-music.exe，与 v0.3.4 实测形态一致）
@@ -46,6 +48,8 @@ jobs:
 
       - name: 解析版本并决定是否上传
         id: meta
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           conf_version="$(jq -r '.version' src-tauri/tauri.conf.json)"
@@ -70,8 +74,28 @@ jobs:
 
           # 已正式发布的版本只允许 tag 触发覆盖，自动构建绝不碰正式产物
           allow_upload=true
-          view_json="$(gh release view "${tag_name}" --repo "${GITHUB_REPOSITORY}" --json isDraft 2>/dev/null || true)"
-          if [[ -n "${view_json}" ]] && [[ "$(echo "${view_json}" | jq -r '.isDraft')" == "false" ]]; then
+          view_error="$(mktemp)"
+          trap 'rm -f "${view_error}"' EXIT
+          if view_json="$(gh release view "${tag_name}" --repo "${GITHUB_REPOSITORY}" --json isDraft 2>"${view_error}")"; then
+            if ! is_draft="$(jq -r '.isDraft' <<< "${view_json}")"; then
+              echo "::error::无法解析 ${tag_name} 的 Release 状态"
+              exit 1
+            fi
+            if [[ "${is_draft}" != "true" && "${is_draft}" != "false" ]]; then
+              echo "::error::${tag_name} 的 isDraft 字段无效：${is_draft}"
+              exit 1
+            fi
+          else
+            view_status=$?
+            view_error_text="$(<"${view_error}")"
+            if [[ "${view_status}" -eq 1 && "${view_error_text}" == "release not found" ]]; then
+              is_draft=""
+            else
+              cat "${view_error}" >&2
+              exit "${view_status}"
+            fi
+          fi
+          if [[ "${is_draft}" == "false" ]]; then
             if [[ "${is_tag_run}" != "true" ]]; then
               allow_upload=false
               echo "::notice::${tag_name} 已正式发布，本次自动构建仅验证、不上传（重建正式版请用 tag 触发）"
