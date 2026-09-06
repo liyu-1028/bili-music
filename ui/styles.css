@@ -3502,17 +3502,18 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 7px;
 }
 
+/* 主题预览固定配色：独立于当前主题；仅在此调节色块背景与边框颜色。 */
 .swatch-dark {
   background: #1c1c1e;
 }
 
 .swatch-light {
-  border: 0.5px solid rgba(0, 0, 0, 0.1);
+  border: 0.5px solid #c7c7cc;
   background: #ffffff;
 }
 
 .swatch-image {
-  background: #202024;
+  background: linear-gradient(135deg, #34343a, #777780, #303036);
 }
 
 .image-only.is-disabled {
