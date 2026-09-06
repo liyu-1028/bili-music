@@ -1050,7 +1050,7 @@ svg {
 
 #view-home .ranking-list .track-row {
   position: relative;
-  grid-template-columns: 40px minmax(0, 1fr) auto;
+  grid-template-columns: 40px minmax(0, 1fr) var(--list-actions-width);
   gap: 8px;
   min-height: 64px;
   margin-bottom: 6px;
@@ -1115,28 +1115,8 @@ svg {
   border-radius: 10px;
 }
 
-#view-home .ranking-list .track-title {
-  font-size: 14px;
-  font-weight: 500;
-}
-
 #view-home .ranking-list .track-up {
   margin-top: 3px;
-  color: var(--text-3);
-}
-
-#view-home .ranking-list .track-play {
-  min-width: 58px;
-  color: #98989d;
-  font-size: 12.5px;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-  text-align: right;
-}
-
-#view-home .ranking-list .track-duration {
-  min-width: 42px;
-  text-align: right;
 }
 
 #view-home .ranking-list .track-row:first-child {
@@ -1158,10 +1138,6 @@ svg {
   height: 54px;
   flex-basis: 54px;
   border-radius: 12px;
-}
-
-#view-home .ranking-list .track-row:first-child .track-title {
-  font-size: 15px;
 }
 
 #view-home .ranking-list .skeleton-row::before {
@@ -1433,7 +1409,7 @@ svg {
 
 #view-search #search-results .track-row {
   position: relative;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-columns: 44px minmax(0, 1fr) var(--list-actions-width);
   gap: 10px;
   min-height: 76px;
   margin-bottom: 8px;
@@ -1498,22 +1474,10 @@ svg {
   border-radius: 12px;
 }
 
-#view-search #search-results .track-title {
-  font-size: 14.5px;
-  font-weight: 500;
-}
-
 #view-search #search-results .track-up {
   margin-top: 5px;
-  color: var(--text-3);
 }
 
-#view-search #search-results .track-duration {
-  min-width: 42px;
-  text-align: right;
-}
-
-#view-search .track-play,
 #view-search .track-pubdate {
   flex: 0 0 auto;
   color: #98989d;
@@ -1521,10 +1485,6 @@ svg {
   font-variant-numeric: tabular-nums;
   line-height: 1;
   text-align: right;
-}
-
-#view-search .track-play {
-  min-width: 58px;
 }
 
 #view-search .track-pubdate {
@@ -1645,7 +1605,7 @@ svg {
 #view-favorites #favorites-list .track-row,
 #view-playlists #playlist-tracks .track-row {
   position: relative;
-  grid-template-columns: 40px minmax(0, 1fr) auto;
+  grid-template-columns: 40px minmax(0, 1fr) var(--list-actions-width);
   gap: 8px;
   min-height: 64px;
   margin-bottom: 6px;
@@ -1725,22 +1685,9 @@ svg {
   border-radius: 10px;
 }
 
-#view-favorites #favorites-list .track-title,
-#view-playlists #playlist-tracks .track-title {
-  font-size: 14px;
-  font-weight: 500;
-}
-
 #view-favorites #favorites-list .track-up,
 #view-playlists #playlist-tracks .track-up {
   margin-top: 3px;
-  color: var(--text-3);
-}
-
-#view-favorites #favorites-list .track-duration,
-#view-playlists #playlist-tracks .track-duration {
-  min-width: 42px;
-  text-align: right;
 }
 
 #view-playlists .playlist-layout {
@@ -1981,6 +1928,41 @@ svg {
 .skeleton-meta small {
   width: 34%;
   height: 11px;
+}
+
+/* 四个歌曲列表的视觉调节区；不作用于播放条、沉浸页或歌单目录。
+   操作列固定留位，避免分P角标出现后带动数字列位移；按钮样式保持原样。 */
+:is(#home-ranking-list, #search-results, #favorites-list, #playlist-tracks) {
+  --list-actions-width: 136px;
+}
+
+:is(#home-ranking-list, #search-results, #favorites-list, #playlist-tracks) .track-title {
+  font-size: 15px;
+  font-weight: 600;
+  /* 颜色继续沿用基础规则的 --text-1 与 aria-current 的 --accent。 */
+}
+
+:is(#home-ranking-list, #search-results, #favorites-list, #playlist-tracks) .track-up {
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 400;
+  /* 标题与UP主的间距保留各页面原有的 3px / 5px。 */
+}
+
+:is(#home-ranking-list, #search-results, #favorites-list, #playlist-tracks) :is(.track-play, .track-duration) {
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: right;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  width: 64px; /* 时长：为 12:30:20 的六位数字与两个冒号留余量。 */
+}
+
+:is(#home-ranking-list, #search-results, #favorites-list, #playlist-tracks) .track-play {
+  width: 72px; /* 播放量：容纳 2086.7万，以及舍入后的 10000.0万。 */
 }
 
 .track-row {
