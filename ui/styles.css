@@ -1846,6 +1846,16 @@ svg {
   background: rgba(0, 0, 0, 0.025);
 }
 
+/* 仅浅色 hover：黑色 6% 强于普通行的 2.5%；播放行仍由下方选中规则接管。
+   歌单目录的已选卡片不参与覆盖，保留其现有背景。 */
+:root[data-theme="light"] #view-home .ranking-list .track-row:hover,
+:root[data-theme="light"] #view-search #search-results .track-row:hover,
+:root[data-theme="light"] #view-favorites #favorites-list .track-row:hover,
+:root[data-theme="light"] #view-playlists #playlist-tracks .track-row:hover,
+:root[data-theme="light"] #view-playlists .playlist-card:hover:where(:not(.is-selected)) {
+  background: rgba(0, 0, 0, 0.06);
+}
+
 /* 仅浅色播放行：提高优先级，避免普通行灰底覆盖 --accent-dim。 */
 :root[data-theme="light"] #view-home .ranking-list .track-row:has(.track[aria-current="true"]),
 :root[data-theme="light"] #view-search #search-results .track-row:has(.track[aria-current="true"]),
