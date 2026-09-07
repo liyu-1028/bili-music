@@ -491,7 +491,7 @@ function setActiveView(view) {
 }
 
 function applyTheme(theme, persist = true) {
-  const safeTheme = ["dark", "light", "image"].includes(theme) ? theme : "dark";
+  const safeTheme = ["dark", "light", "image", "dynamic"].includes(theme) ? theme : "dark";
   root.dataset.theme = safeTheme;
   for (const option of themeOptions) {
     const selected = option.dataset.themeOption === safeTheme;
@@ -500,6 +500,17 @@ function applyTheme(theme, persist = true) {
   }
   for (const group of imageOnlyGroups) {
     group.classList.toggle("is-disabled", safeTheme !== "image");
+  }
+  if (safeTheme === "dynamic") {
+    // 移除背景图留下的内联值，让动态主题使用 CSS 固定参数；不读写用户偏好。
+    for (const property of ["--glass-blur", "--panel-alpha", "--content-panel-alpha", "--background-dim"]) {
+      root.style.removeProperty(property);
+    }
+  } else {
+    setGlassBlur(localStorage.getItem(GLASS_BLUR_KEY), false);
+    setPanelAlpha(localStorage.getItem(PANEL_ALPHA_KEY), false);
+    setContentAlpha(localStorage.getItem(CONTENT_ALPHA_KEY), false);
+    setBackgroundDim(localStorage.getItem(BACKGROUND_DIM_KEY), false);
   }
   if (persist) {
     localStorage.setItem(THEME_KEY, safeTheme);
@@ -517,6 +528,7 @@ function setGlassBlur(value, persist = true) {
 }
 
 function setPanelAlpha(value, persist = true) {
+  panelAlphaSlider.min = "20";
   const safeValue = clampNumber(value, 20, 100, 72);
   root.style.setProperty("--panel-alpha", String(safeValue / 100));
   panelAlphaSlider.value = String(safeValue);
@@ -537,6 +549,7 @@ function setContentAlpha(value, persist = true) {
 }
 
 function setBackgroundDim(value, persist = true) {
+  backgroundDimSlider.min = "40";
   const safeValue = clampNumber(value, 40, 95, 90);
   root.style.setProperty("--background-dim", String(safeValue / 100));
   backgroundDimSlider.value = String(safeValue);
@@ -934,10 +947,6 @@ playerAudio.addEventListener("emptied", () => {
 });
 
 applyTheme(localStorage.getItem(THEME_KEY), false);
-setGlassBlur(localStorage.getItem(GLASS_BLUR_KEY), false);
-setPanelAlpha(localStorage.getItem(PANEL_ALPHA_KEY), false);
-setContentAlpha(localStorage.getItem(CONTENT_ALPHA_KEY), false);
-setBackgroundDim(localStorage.getItem(BACKGROUND_DIM_KEY), false);
 applyVolume(localStorage.getItem(VOLUME_KEY), false);
 updateProgress(0);
 updatePlayPauseButton();

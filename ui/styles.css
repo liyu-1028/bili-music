@@ -80,6 +80,110 @@
   --shadow: 0 20px 54px rgba(0, 0, 0, 0.26);
 }
 
+/* 动态主题独立参数：封面色已经压暗；前景使用稳定的高可读灰阶。 */
+:root[data-theme="dynamic"] {
+  color-scheme: dark;
+  /* 动态质感固定值：不使用保存的滑块偏好，集中供代码内微调。 */
+  --glass-blur: 0px;
+  --panel-alpha: 0.2;
+  --background-dim: 0;
+  --content-panel-alpha: 0;
+  --panel: rgba(22, 24, 28, var(--panel-alpha));
+  --text-2: #c7c7cd;
+  --text-3: #a8a8b0;
+  /* 保留原阴影公式：固定 20% 面板对应最强的 78%；单层 1px 下移 / 2px 模糊。 */
+  --dynamic-text-shadow-alpha: clamp(0, calc((0.72 - var(--panel-alpha)) * 1.5), 0.78);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, var(--dynamic-text-shadow-alpha));
+}
+
+/* 普通文字自动继承根节点阴影；表单控件显式继承，避免浏览器默认样式重置。 */
+:root[data-theme="dynamic"] :is(button, input, select, textarea) {
+  text-shadow: inherit;
+}
+
+/* 已有稳定深底的浮层不需要额外阴影，子元素和控件一并继承 none。 */
+:root[data-theme="dynamic"] :is(.settings-panel, .immersive-sheet) {
+  text-shadow: none;
+}
+
+/* 动态主题表面配套：仅调此主题，数值集中供 live 调整。 */
+:root[data-theme="dynamic"] .panel {
+  /* 固定 0px 模糊；不额外 saturate，保持取色亮度上限。 */
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+
+:root[data-theme="dynamic"] #view-home .home-ranking-panel,
+:root[data-theme="dynamic"] #view-search .search-command-panel,
+:root[data-theme="dynamic"] #view-search .search-results-panel,
+:root[data-theme="dynamic"] #view-favorites .list-head,
+:root[data-theme="dynamic"] #view-playlists .list-head,
+:root[data-theme="dynamic"] #view-favorites #favorites-list,
+:root[data-theme="dynamic"] #view-playlists .playlist-detail,
+:root[data-theme="dynamic"] #view-playlists #playlists-list {
+  /* 内容区固定透明；列表行自身的普通、hover、播放态背景继续保留。 */
+  background: rgba(22, 24, 28, var(--content-panel-alpha, 0));
+}
+
+:root[data-theme="dynamic"] .settings-panel {
+  /* 设置浮层保持至少 96% 遮挡、48px 模糊，避免低值时透出底层文字。 */
+  background: rgba(22, 24, 28, max(0.96, var(--panel-alpha)));
+  backdrop-filter: blur(max(48px, var(--glass-blur)));
+  -webkit-backdrop-filter: blur(max(48px, var(--glass-blur)));
+}
+
+:root[data-theme="dynamic"] body::after {
+  background: rgba(10, 10, 11, var(--background-dim));
+}
+/* 动态主题表面配套结束 */
+
+.dynamic-background {
+  display: none;
+  position: fixed;
+  z-index: -2;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+:root[data-theme="dynamic"] .dynamic-background {
+  display: block;
+}
+
+.dynamic-background-layer {
+  position: absolute;
+  inset: -15%;
+  opacity: 0;
+  /* 默认中性配色亦供启动、空队列和取色失败使用；不动画化渐变本身。 */
+  background:
+    radial-gradient(ellipse at 18% 25%, var(--dynamic-color-1, rgb(28, 32, 40)), transparent 65%),
+    radial-gradient(ellipse at 82% 70%, var(--dynamic-color-2, rgb(38, 32, 42)), transparent 65%),
+    linear-gradient(125deg, var(--dynamic-color-3, rgb(28, 39, 39)), var(--dynamic-color-1, rgb(28, 32, 40)));
+  transition: opacity 2500ms ease;
+}
+
+.dynamic-background-layer.is-visible {
+  opacity: 1;
+}
+
+:root[data-theme="dynamic"] .dynamic-background-layer {
+  animation: dynamic-background-drift 32s ease-in-out infinite alternate;
+}
+
+.dynamic-background.is-paused .dynamic-background-layer {
+  animation-play-state: paused;
+}
+
+@keyframes dynamic-background-drift {
+  from { transform: translate3d(-2%, -1%, 0) rotate(-2deg) scale(1.02); }
+  to { transform: translate3d(2%, 1%, 0) rotate(2deg) scale(1.05); }
+}
+
+/* 沉浸页保留不透明静态深底，封面与歌词不叠加流动色彩。 */
+:root[data-theme="dynamic"] .immersive-sheet {
+  background: #1c1c1e;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -208,6 +312,13 @@ svg {
   background: rgba(24, 24, 28, var(--panel-alpha));
   backdrop-filter: blur(var(--glass-blur)) saturate(140%);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+}
+
+/* 动态标题栏透出 55% 渐变；略高于面板的遮挡保证 SVG 关闭键可辨，保留原细线。 */
+:root[data-theme="dynamic"] .window-titlebar {
+  background: rgba(22, 24, 28, 0.45);
+  backdrop-filter: blur(var(--glass-blur)); /* 动态固定为 0px，不增加模糊或饱和度。 */
+  -webkit-backdrop-filter: blur(var(--glass-blur));
 }
 
 .window-titlebar-brand,
@@ -2974,6 +3085,12 @@ svg {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  :root[data-theme="dynamic"] .dynamic-background-layer {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+
   #mascot-stage #mascot-slot svg,
   #mascot-stage #body,
   #mascot-stage #head,
@@ -3538,6 +3655,10 @@ input[type="range"]::-webkit-slider-thumb {
 
 .swatch-image {
   background: linear-gradient(135deg, #34343a, #777780, #303036);
+}
+
+.swatch-dynamic {
+  background: linear-gradient(125deg, #293c42, #494051, #34423d);
 }
 
 .image-only.is-disabled {
