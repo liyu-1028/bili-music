@@ -4,8 +4,15 @@
     "Segoe UI", sans-serif;
   font-synthesis: none;
   color-scheme: dark;
-  --accent: #fb7299;
-  --accent-dim: rgba(251, 114, 153, 0.14);
+  /* 修改这三个通道即可同步强调色、透明变体与 hover。 */
+  --accent-r: 251;
+  --accent-g: 114;
+  --accent-b: 153;
+  --accent-rgb: var(--accent-r), var(--accent-g), var(--accent-b);
+  --accent: rgb(var(--accent-rgb));
+  --accent-dim: rgba(var(--accent-rgb), 0.14);
+  /* 保留原 hover 的 RGB 色差，默认精确得到 rgb(252, 138, 171)。 */
+  --accent-hover: rgb(calc(var(--accent-r) + 1), calc(var(--accent-g) + 24), calc(var(--accent-b) + 18));
   --radius: 14px;
   --radius-sm: 11px;
   --glass-blur: 40px;
@@ -411,7 +418,7 @@ svg {
 }
 
 .window-control-close:hover {
-  background: rgba(251, 114, 153, 0.16);
+  background: rgba(var(--accent-rgb), 0.16);
   color: var(--accent);
 }
 
@@ -689,7 +696,7 @@ svg {
 }
 
 .searchbar:focus-within {
-  border-color: rgba(251, 114, 153, 0.48);
+  border-color: rgba(var(--accent-rgb), 0.48);
   background: var(--panel-raised);
 }
 
@@ -769,7 +776,7 @@ svg {
 }
 
 .music-tab.is-active {
-  border-color: rgba(251, 114, 153, 0.48);
+  border-color: rgba(var(--accent-rgb), 0.48);
   color: var(--text-1);
   background: var(--accent-dim);
 }
@@ -936,7 +943,7 @@ svg {
 }
 
 #view-home .home-mode-tab.is-active {
-  border-color: rgba(251, 114, 153, 0.42);
+  border-color: rgba(var(--accent-rgb), 0.42);
   background: var(--accent-dim);
   color: var(--accent);
 }
@@ -1000,7 +1007,7 @@ svg {
 }
 
 #view-home .home-hint-input:focus {
-  border-color: rgba(251, 114, 153, 0.48);
+  border-color: rgba(var(--accent-rgb), 0.48);
   background: var(--panel-raised);
 }
 
@@ -1021,7 +1028,7 @@ svg {
 }
 
 .primary-cta:hover {
-  background: #fc8aab;
+  background: var(--accent-hover);
 }
 
 #view-home .home-ranking-panel {
@@ -1220,14 +1227,14 @@ svg {
 }
 
 #view-home .ranking-list .track-row:has(.track[aria-current="true"]) {
-  border-color: rgba(251, 114, 153, 0.42);
+  border-color: rgba(var(--accent-rgb), 0.42);
   background: var(--accent-dim);
 }
 
 #view-home .ranking-list .track-row:has(.track[aria-current="true"])::before {
-  border-color: rgba(251, 114, 153, 0.42);
+  border-color: rgba(var(--accent-rgb), 0.42);
   color: var(--accent);
-  background: rgba(251, 114, 153, 0.1);
+  background: rgba(var(--accent-rgb), 0.1);
 }
 
 #view-home .ranking-list .track {
@@ -1395,7 +1402,7 @@ svg {
 }
 
 #view-search .searchbar:focus-within {
-  border-color: rgba(251, 114, 153, 0.5);
+  border-color: rgba(var(--accent-rgb), 0.5);
   background: rgba(0, 0, 0, 0.2);
 }
 
@@ -1493,7 +1500,7 @@ svg {
 }
 
 #view-search .music-tab.is-active {
-  border-color: rgba(251, 114, 153, 0.42);
+  border-color: rgba(var(--accent-rgb), 0.42);
   background: var(--accent-dim);
   color: var(--accent);
 }
@@ -1579,14 +1586,14 @@ svg {
 }
 
 #view-search #search-results .track-row:has(.track[aria-current="true"]) {
-  border-color: rgba(251, 114, 153, 0.42);
+  border-color: rgba(var(--accent-rgb), 0.42);
   background: var(--accent-dim);
 }
 
 #view-search #search-results .track-row:has(.track[aria-current="true"])::before {
-  border-color: rgba(251, 114, 153, 0.42);
+  border-color: rgba(var(--accent-rgb), 0.42);
   color: var(--accent);
-  background: rgba(251, 114, 153, 0.1);
+  background: rgba(var(--accent-rgb), 0.1);
 }
 
 #view-search #search-results .track {
@@ -1786,15 +1793,15 @@ svg {
 
 #view-favorites #favorites-list .track-row:has(.track[aria-current="true"]),
 #view-playlists #playlist-tracks .track-row:has(.track[aria-current="true"]) {
-  border-color: rgba(251, 114, 153, 0.42);
+  border-color: rgba(var(--accent-rgb), 0.42);
   background: var(--accent-dim);
 }
 
 #view-favorites #favorites-list .track-row:has(.track[aria-current="true"])::before,
 #view-playlists #playlist-tracks .track-row:has(.track[aria-current="true"])::before {
-  border-color: rgba(251, 114, 153, 0.42);
+  border-color: rgba(var(--accent-rgb), 0.42);
   color: var(--accent);
-  background: rgba(251, 114, 153, 0.1);
+  background: rgba(var(--accent-rgb), 0.1);
 }
 
 #view-favorites #favorites-list .track,
@@ -1887,7 +1894,7 @@ svg {
 }
 
 #view-playlists .playlist-card.is-selected {
-  border-color: rgba(251, 114, 153, 0.42);
+  border-color: rgba(var(--accent-rgb), 0.42);
   background: var(--accent-dim);
   color: var(--text-1);
 }
@@ -2363,7 +2370,7 @@ svg {
 }
 
 .playlist-card.is-selected {
-  border-color: rgba(251, 114, 153, 0.36);
+  border-color: rgba(var(--accent-rgb), 0.36);
   background: var(--accent-dim);
 }
 
@@ -2594,7 +2601,7 @@ svg {
 }
 
 .library-name-field input:focus {
-  border-color: rgba(251, 114, 153, 0.5);
+  border-color: rgba(var(--accent-rgb), 0.5);
 }
 
 .library-modal-actions {
@@ -3872,7 +3879,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .settings-select:focus,
 .settings-input:focus {
-  border-color: rgba(251, 114, 153, 0.48);
+  border-color: rgba(var(--accent-rgb), 0.48);
   background: var(--panel-raised);
 }
 

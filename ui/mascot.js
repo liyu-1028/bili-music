@@ -16,19 +16,19 @@
         <svg class="mascot-svg mascot-kuro" viewBox="0 0 100 100" role="img" aria-label="小黑咪">
           <g id="tail">
             <path d="M25 67 C10 67 11 49 24 51 C32 52 31 61 25 59 C20 58 20 54 24 53" fill="none" stroke="#3B3D48" stroke-width="8" stroke-linecap="round"/>
-            <path d="M22 52 C19 50 20 46 24 45" fill="none" stroke="#FB7299" stroke-width="4" stroke-linecap="round"/>
+            <path d="M22 52 C19 50 20 46 24 45" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round"/>
           </g>
           <g id="body">
             <path d="M29 43 C23 54 25 76 36 84 C44 90 60 90 68 84 C79 75 77 54 71 43 C62 31 38 31 29 43Z" fill="#333640"/>
             <path d="M40 63 C43 58 57 58 60 63 C63 72 58 80 50 80 C42 80 37 72 40 63Z" fill="#FFDD66"/>
-            <circle cx="35" cy="76" r="5" fill="#FB7299"/>
-            <circle cx="65" cy="76" r="5" fill="#FB7299"/>
+            <circle cx="35" cy="76" r="5" fill="var(--accent)"/>
+            <circle cx="65" cy="76" r="5" fill="var(--accent)"/>
           </g>
           <g id="ears">
             <path d="M31 31 L30 12 L45 28Z" fill="#333640"/>
             <path d="M69 31 L70 12 L55 28Z" fill="#333640"/>
-            <path d="M36 27 L35 19 L42 29Z" fill="#FB7299"/>
-            <path d="M64 27 L65 19 L58 29Z" fill="#FB7299"/>
+            <path d="M36 27 L35 19 L42 29Z" fill="var(--accent)"/>
+            <path d="M64 27 L65 19 L58 29Z" fill="var(--accent)"/>
           </g>
           <g id="head">
             <path d="M27 30 C30 18 41 14 50 14 C59 14 70 18 73 30 C78 48 67 61 50 61 C33 61 22 48 27 30Z" fill="#3B3D48"/>
@@ -67,8 +67,8 @@
             </g>
             <g id="body">
               <path d="M27 45 C29 33 39 27 50 27 C61 27 71 33 73 45 C76 62 66 73 50 73 C34 73 24 62 27 45Z" fill="#F7F3FF"/>
-              <circle cx="35" cy="56" r="5" fill="#FB7299"/>
-              <circle cx="65" cy="56" r="5" fill="#FB7299"/>
+              <circle cx="35" cy="56" r="5" fill="var(--accent)"/>
+              <circle cx="65" cy="56" r="5" fill="var(--accent)"/>
             </g>
             <g id="head">
               <path d="M31 34 C36 24 45 20 50 20 C55 20 64 24 69 34 C61 31 39 31 31 34Z" fill="#CDB8FF"/>
@@ -125,7 +125,7 @@
               <circle cx="61.5" cy="32.5" r="1.2" fill="#FFFFFF"/>
             </g>
             <g id="scarf">
-              <path d="M38 57 H62" stroke="#FB7299" stroke-width="5" stroke-linecap="round"/>
+              <path d="M38 57 H62" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
               <circle cx="50" cy="60" r="3" fill="#FFE36E"/>
             </g>
           </svg>
