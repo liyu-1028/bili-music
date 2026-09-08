@@ -67,7 +67,6 @@ function initializeDynamicBackground() {
   const root = document.documentElement;
   const backdrop = document.querySelector(".dynamic-background");
   const layers = [...backdrop.children];
-  const immersive = document.querySelector("#immersive-player");
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let source = "";
   let cachedSource = null;
@@ -198,7 +197,7 @@ function initializeDynamicBackground() {
   }
 
   function updateAvailability() {
-    const next = root.dataset.theme === "dynamic" && !document.hidden && !immersive.classList.contains("is-open");
+    const next = root.dataset.theme === "dynamic" && !document.hidden;
     backdrop.classList.toggle("is-paused", !next);
     if (next === active) return;
     active = next;
@@ -213,7 +212,6 @@ function initializeDynamicBackground() {
     refresh();
   });
   new MutationObserver(updateAvailability).observe(root, { attributes: true, attributeFilter: ["data-theme"] });
-  new MutationObserver(updateAvailability).observe(immersive, { attributes: true, attributeFilter: ["class"] });
   document.addEventListener("visibilitychange", updateAvailability);
   reducedMotion.addEventListener("change", () => {
     if (reducedMotion.matches) finishFade();

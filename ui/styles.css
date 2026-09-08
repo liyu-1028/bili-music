@@ -63,6 +63,8 @@
 
 :root[data-theme="image"] {
   color-scheme: dark;
+  /* 内容区统一透明；不再读取用户保存的浓度，保留覆盖以免回落到深色底。 */
+  --content-panel-alpha: 0;
   --text-1: #f5f5f7;
   --text-2: #c7c7cd;
   --text-3: #a8a8b0;
@@ -83,7 +85,7 @@
 /* 动态主题独立参数：封面色已经压暗；前景使用稳定的高可读灰阶。 */
 :root[data-theme="dynamic"] {
   color-scheme: dark;
-  /* 动态质感固定值：不使用保存的滑块偏好，集中供代码内微调。 */
+  /* 动态质感固定值，不读取配置；沉浸页继续基于这组值叠加。 */
   --glass-blur: 0px;
   --panel-alpha: 0.2;
   --background-dim: 0;
@@ -91,7 +93,7 @@
   --panel: rgba(22, 24, 28, var(--panel-alpha));
   --text-2: #c7c7cd;
   --text-3: #a8a8b0;
-  /* 保留原阴影公式：固定 20% 面板对应最强的 78%；单层 1px 下移 / 2px 模糊。 */
+  /* 保留主面板阴影公式：固定 20% 时为最强 78%；沉浸页一并继承。 */
   --dynamic-text-shadow-alpha: clamp(0, calc((0.72 - var(--panel-alpha)) * 1.5), 0.78);
   text-shadow: 0 1px 2px rgba(0, 0, 0, var(--dynamic-text-shadow-alpha));
 }
@@ -101,14 +103,14 @@
   text-shadow: inherit;
 }
 
-/* 已有稳定深底的浮层不需要额外阴影，子元素和控件一并继承 none。 */
-:root[data-theme="dynamic"] :is(.settings-panel, .immersive-sheet) {
+/* 设置浮层已有稳定深底；沉浸页继续继承动态主题原有文字阴影。 */
+:root[data-theme="dynamic"] .settings-panel {
   text-shadow: none;
 }
 
 /* 动态主题表面配套：仅调此主题，数值集中供 live 调整。 */
 :root[data-theme="dynamic"] .panel {
-  /* 固定 0px 模糊；不额外 saturate，保持取色亮度上限。 */
+  /* 使用动态固定模糊值；不额外 saturate，保持取色亮度上限。 */
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
 }
@@ -179,9 +181,24 @@
   to { transform: translate3d(2%, 1%, 0) rotate(2deg) scale(1.05); }
 }
 
-/* 沉浸页保留不透明静态深底，封面与歌词不叠加流动色彩。 */
+/* 沉浸页复用主界面变量：不透明度 +35 个百分点（封顶 100%），模糊 +32px（封顶 80px）。 */
 :root[data-theme="dynamic"] .immersive-sheet {
-  background: #1c1c1e;
+  background: rgba(22, 24, 28, min(1, calc(var(--panel-alpha) + 0.35)));
+  backdrop-filter: blur(min(80px, calc(var(--glass-blur) + 32px)));
+  -webkit-backdrop-filter: blur(min(80px, calc(var(--glass-blur) + 32px)));
+}
+
+:root[data-theme="dynamic"] .immersive-backdrop {
+  background: transparent;
+}
+
+/* 底层页面同步淡出，避免列表与封面透进歌词；共享原渐变层，不切换 z-index。 */
+:root[data-theme="dynamic"] :is(.app-shell, .player-bar, .window-titlebar, #mascot-stage) {
+  transition: opacity 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+:root[data-theme="dynamic"] body:has(#immersive-player.is-open) :is(.app-shell, .player-bar, .window-titlebar, #mascot-stage) {
+  opacity: 0;
 }
 
 * {
@@ -317,7 +334,7 @@ svg {
 /* 动态标题栏透出 55% 渐变；略高于面板的遮挡保证 SVG 关闭键可辨，保留原细线。 */
 :root[data-theme="dynamic"] .window-titlebar {
   background: rgba(22, 24, 28, 0.45);
-  backdrop-filter: blur(var(--glass-blur)); /* 动态固定为 0px，不增加模糊或饱和度。 */
+  backdrop-filter: blur(var(--glass-blur)); /* 复用主界面模糊值，不额外增加饱和度。 */
   -webkit-backdrop-filter: blur(var(--glass-blur));
 }
 
