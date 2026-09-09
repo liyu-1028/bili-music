@@ -4099,11 +4099,38 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .immersive-content {
-  /* 封面保持原宽度，仅调整比例；圆角与左栏间距集中在此。 */
+  /* 沉浸页 live 调参：宽度只取左栏现有空间，不改变左右等宽分配。 */
   --immersive-cover-ratio: 16 / 10;
   --immersive-cover-radius: 28px;
-  --immersive-left-gap: 16px;
-  --immersive-control-gap: 18px 10px;
+  --immersive-cover-max: 520px;
+  /* 从窗口高度预留标题两行、控件、校准、间距及外框；余量换算成 16:10 宽度。 */
+  --immersive-cover-height-budget: 490px;
+  --immersive-reflection-space: 28px;
+  /* 封面下方 live 调参：独立限宽，不影响封面尺寸或右侧歌词。 */
+  --immersive-details-max: 360px;
+  --immersive-title-size: 22px;
+  --immersive-title-weight: 500;
+  --immersive-title-leading: 1.25;
+  --immersive-uploader-size: 13px;
+  --immersive-uploader-gap: 6px;
+  --immersive-play-size: 42px;
+  --immersive-icon-size: 34px;
+  --immersive-control-icon-size: 18px;
+  --immersive-transport-gap: 12px;
+  --immersive-action-size: 12px;
+  --immersive-action-height: 30px;
+  --immersive-action-padding: 10px;
+  --immersive-timeline-size: 11px;
+  --immersive-calibration-height: 28px;
+  --immersive-calibration-size: 12px;
+  --immersive-calibration-gap: 3px;
+  --immersive-calibration-padding: 6px;
+  --immersive-offset-width: 40px;
+  --immersive-offset-size: 11px;
+  --immersive-left-gap: 8px;
+  --immersive-control-gap: 10px 8px;
+  /* 渐隐只改变透明度；同高留白保护滚动到头/尾时的首末行。 */
+  --lyrics-fade-height: 32px;
   display: grid;
   min-height: 0;
   grid-template-columns: minmax(280px, 0.92fr) minmax(320px, 1.08fr);
@@ -4111,6 +4138,30 @@ input[type="range"]::-webkit-slider-thumb {
   align-items: center;
   gap: 18px 38px;
   padding: 10px clamp(12px, 5vw, 70px) 18px;
+}
+
+@media (min-width: 981px) and (max-height: 720px) {
+  .immersive-content {
+    /* 620px 窗口：封面宽 288px、高 180px，保留两行标题及整排校准控件。 */
+    --immersive-cover-max: 360px;
+    --immersive-cover-height-budget: 440px;
+    --immersive-reflection-space: 24px;
+    /* 低窗口只收紧下半栏；上面的封面参数保持独立。 */
+    --immersive-details-max: 280px;
+    --immersive-title-size: 20px;
+    --immersive-uploader-size: 12px;
+    --immersive-uploader-gap: 4px;
+    --immersive-play-size: 38px;
+    --immersive-icon-size: 32px;
+    --immersive-control-icon-size: 16px;
+    --immersive-transport-gap: 10px;
+    --immersive-action-height: 28px;
+    --immersive-calibration-height: 26px;
+    --immersive-calibration-size: 11px;
+    --immersive-left-gap: 6px;
+    --immersive-control-gap: 8px 6px;
+    --lyrics-fade-height: 24px;
+  }
 }
 
 .immersive-art {
@@ -4294,6 +4345,19 @@ input[type="range"]::-webkit-slider-thumb {
 .lyrics-lines::-webkit-scrollbar {
   width: 0;
   height: 0;
+}
+
+.immersive-player .lyrics-lines {
+  padding-block: var(--lyrics-fade-height);
+  /* 渐隐最多占单侧 20%，即使歌词很短，中间仍有完全不透明的区域。 */
+  --lyrics-edge-mask: linear-gradient(to bottom,
+    transparent,
+    #000 min(var(--lyrics-fade-height), 20%),
+    #000 calc(100% - min(var(--lyrics-fade-height), 20%)),
+    transparent);
+  -webkit-mask-image: var(--lyrics-edge-mask);
+  mask-image: var(--lyrics-edge-mask);
+  mask-mode: alpha;
 }
 
 .lyrics-line {
@@ -4528,7 +4592,6 @@ input[type="range"]::-webkit-slider-thumb {
 @media (min-width: 981px) {
   .immersive-content {
     --immersive-col-gap: 40px;
-    --immersive-cover-max: 300px;
     --lyrics-max-width: 560px;
     grid-template-areas:
       ". lyrics-pane"
@@ -4538,7 +4601,7 @@ input[type="range"]::-webkit-slider-thumb {
       "lyric-tools lyrics-pane"
       ". lyrics-pane";
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    /* 上下弹性空白均分封面变矮后的余量；歌词栏仍跨满全部行。 */
+    /* 上下空白只分配放大左栏后剩余的空间；歌词栏仍跨满全部行。 */
     grid-template-rows:
       minmax(0, 1fr)
       auto
@@ -4555,17 +4618,17 @@ input[type="range"]::-webkit-slider-thumb {
 
   .immersive-art {
     width: 100%;
-    max-width: var(--immersive-cover-max);
+    max-width: min(var(--immersive-cover-max), calc((100dvh - var(--immersive-cover-height-budget)) * 1.6));
     grid-area: art;
     justify-self: center;
-    padding-bottom: 36px;
+    padding-bottom: var(--immersive-reflection-space);
   }
 
   .immersive-track {
     position: relative;
     z-index: 1;
     width: 100%;
-    max-width: var(--immersive-cover-max);
+    max-width: var(--immersive-details-max);
     grid-area: track;
     align-self: start;
     justify-self: center;
@@ -4575,8 +4638,9 @@ input[type="range"]::-webkit-slider-thumb {
   .immersive-track h2 {
     display: -webkit-box;
     overflow: hidden;
-    font-size: 22px;
-    line-height: 1.3;
+    font-size: var(--immersive-title-size);
+    font-weight: var(--immersive-title-weight);
+    line-height: var(--immersive-title-leading);
     text-overflow: clip;
     white-space: normal;
     -webkit-box-orient: vertical;
@@ -4584,7 +4648,11 @@ input[type="range"]::-webkit-slider-thumb {
   }
 
   .immersive-track p {
-    margin-top: 10px;
+    margin-top: var(--immersive-uploader-gap);
+    overflow: hidden;
+    font-size: var(--immersive-uploader-size);
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .lyrics-pane {
@@ -4611,7 +4679,7 @@ input[type="range"]::-webkit-slider-thumb {
   .immersive-controls {
     display: grid;
     width: 100%;
-    max-width: var(--immersive-cover-max);
+    max-width: var(--immersive-details-max);
     grid-area: player;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     align-self: start;
@@ -4627,34 +4695,57 @@ input[type="range"]::-webkit-slider-thumb {
 
   .immersive-controls .transport-controls {
     justify-content: center;
+    gap: var(--immersive-transport-gap);
+  }
+
+  .immersive-controls .icon-button {
+    width: var(--immersive-icon-size);
+    height: var(--immersive-icon-size);
+  }
+
+  .immersive-controls .play-button {
+    width: var(--immersive-play-size);
+    height: var(--immersive-play-size);
+  }
+
+  .immersive-controls .transport-controls svg {
+    width: var(--immersive-control-icon-size);
+    height: var(--immersive-control-icon-size);
   }
 
   #open-bilibili-button,
   #immersive-favorite-button,
   #immersive-add-playlist-button {
-    width: 100%;
+    width: auto;
+    max-width: 100%;
     min-width: 0;
+    min-height: var(--immersive-action-height);
+    padding-inline: var(--immersive-action-padding);
     overflow: hidden;
+    justify-self: center;
     justify-content: center;
-    font-size: 13px;
+    font-size: var(--immersive-action-size);
     text-align: center;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .immersive-timeline {
+    width: 100%;
     order: -1;
+    font-size: var(--immersive-timeline-size);
+    line-height: 1.5;
   }
 
   .lyrics-controls {
     width: 100%;
-    max-width: var(--immersive-cover-max);
+    max-width: var(--immersive-details-max);
     grid-area: lyric-tools;
     align-self: start;
     justify-self: center;
     justify-content: center;
-    gap: 4px;
-    margin-top: 8px;
+    gap: var(--immersive-calibration-gap);
+    margin-top: 0;
   }
 
   .lyrics-controls-label {
@@ -4662,15 +4753,16 @@ input[type="range"]::-webkit-slider-thumb {
   }
 
   .lyrics-controls .small-button {
-    min-height: 28px;
-    padding: 0 8px;
+    min-height: var(--immersive-calibration-height);
+    padding: 0 var(--immersive-calibration-padding);
     border-color: transparent;
     border-radius: 8px;
-    font-size: 12px;
+    font-size: var(--immersive-calibration-size);
   }
 
   .lyrics-offset-value {
-    min-width: 44px;
+    min-width: var(--immersive-offset-width);
+    font-size: var(--immersive-offset-size);
   }
 
   .lyrics-lines {
@@ -4693,24 +4785,6 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 @media (min-width: 981px) and (max-height: 650px) {
-  .immersive-content {
-    --immersive-left-gap: 8px;
-    --immersive-control-gap: 10px;
-  }
-
-  .immersive-art {
-    max-width: min(32vh, 280px);
-    padding-bottom: 32px;
-  }
-
-  .immersive-track p {
-    margin-top: 6px;
-  }
-
-  .lyrics-controls {
-    margin-top: 0;
-  }
-
   .lyrics-lines {
     gap: 14px;
   }
