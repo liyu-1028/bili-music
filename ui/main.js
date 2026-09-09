@@ -2391,12 +2391,26 @@ function choosePlaylistAndAdd(video = currentPlayableTrack()) {
     empty.textContent = "还没有歌单。先在下方新建一个，再把这首歌放进去。";
     list.append(empty);
   } else {
+    const trackBvid = track.bvid.toLowerCase();
     for (const playlist of libraryState.playlists) {
+      const alreadyIn = playlist.items.some(
+        (item) => String(item?.bvid ?? "").toLowerCase() === trackBvid,
+      );
       const button = document.createElement("button");
       button.type = "button";
       button.className = "playlist-choice";
-      button.innerHTML = `<span>${escapeText(playlist.name)}</span><small>${playlist.items.length} 首</small>`;
-      button.addEventListener("click", () => addTrackToPlaylist(playlist, track));
+      if (alreadyIn) {
+        button.classList.add("is-added");
+        button.setAttribute("aria-disabled", "true");
+      }
+      button.innerHTML = `<span>${escapeText(playlist.name)}</span><small>${alreadyIn ? "已添加 · " : ""}${playlist.items.length} 首</small>`;
+      button.addEventListener("click", () => {
+        if (alreadyIn) {
+          libraryModalStatus.textContent = `该歌曲已在歌单“${playlist.name}”中，无需重复加入。`;
+          return;
+        }
+        addTrackToPlaylist(playlist, track);
+      });
       list.append(button);
     }
   }
@@ -2450,7 +2464,10 @@ async function addTrackToPlaylist(playlist, track) {
     status.textContent = `已加入歌单“${playlist.name}”。`;
     closeLibraryModal();
   } catch (error) {
-    libraryModalStatus.textContent = `加入歌单失败：${error}`;
+    // 后端重复检测兑底（例如弹窗打开期间歌单已在别处被更新）。
+    libraryModalStatus.textContent = String(error).includes("歌曲已在歌单")
+      ? `${error}`
+      : `加入歌单失败：${error}`;
   }
 }
 
