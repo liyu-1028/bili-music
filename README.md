@@ -6,14 +6,16 @@
   <h1>Bili Music · 午夜黑胶</h1>
 
   <p>一个免登录、不落盘的 B 站音乐播放器。把哔哩哔哩当作你的曲库，听歌不必登录，不必下载。</p>
-
+</div>
   <p>
-    <img alt="platform" src="https://img.shields.io/badge/platform-Windows-0078D6?logo=windows&logoColor=white" />
-    <img alt="tauri" src="https://img.shields.io/badge/Tauri-v2-24C8DB?logo=tauri&logoColor=white" />
-    <img alt="rust" src="https://img.shields.io/badge/Rust-backend-000000?logo=rust&logoColor=white" />
-    <img alt="license" src="https://img.shields.io/badge/license-PolyForm%20Strict%201.0.0-orange" />
+  <img src="screenshots/home.png" width="640" alt="Bili Music 主界面" />
   </p>
-  <img src="screenshots/home-placeholder.png" width="760" alt="Bili Music 主界面截图" />
+  <p>
+  <img src="screenshots/lyrics.png" width="640" alt="Bili Music 沉浸播放页与歌词" />
+  </p>
+  <p>
+  <img src="screenshots/settings.png" width="640" alt="Bili Music 设置" />
+  </p>
 </div>
 
 ---
@@ -33,7 +35,7 @@ Bili Music 是一个基于 **Tauri v2 + Rust** 的桌面音乐播放器，把 B 
 
 | 功能 | 说明 |
 | --- | --- |
-| 🔎 音乐搜索 | B 站音乐区搜索，支持 6 个子分区筛选，支持粘贴 BV 号直接播放 |
+| 🔎 音乐搜索 | B 站音乐区搜索，本地相关性重排让原曲上浮，可按「单曲 / 合集」筛选，支持粘贴 BV 号直接播放 |放 |
 | 🏠 首页为你推荐 | 首页聚焦「为你推荐」：基于收藏 / 歌单 / 听歌记录，由 AI 生成检索意图再重排真实结果 |
 | 🧠 一句话推荐 | 复用你自己的 AI Key，一句「想听点安静的钢琴」即可即时引导本次推荐方向 |
 | 🕑 听歌记录 | 本地记录真正听过的歌（长歌够 30s、短歌听完 90% 才算），持续加厚推荐口味 |
@@ -42,9 +44,14 @@ Bili Music 是一个基于 **Tauri v2 + Rust** 的桌面音乐播放器，把 B 
 | 🎵 在线流式播放 | 后端 Axum 流代理，透传 `Range`，边下边播，不落盘 |
 | 📼 合集连播 | 多 P 视频可自动顺序连播，标题跟随当前分 P 切换 |
 | ❤️ 收藏与歌单 | 本地 JSON 持久化收藏与自建歌单，原子写入，坏文件不覆盖 |
-| 🪞 沉浸播放页 | 全屏封面、镜面倒影、与底部播放条共享同一套播放器状态 |
-| 🌘 午夜黑胶主题 | 深色 / 浅色 / 背景图三档主题，保留克制的玻璃质感 |
+| 🪞 沉浸播放页 | 大封面、滚动歌词、上下渐隐，与底部播放条共享同一套播放器状态 |
+| 🌘 四档主题 | 深色 / 浅色 / 背景图 / 动态背景，动态主题从当前封面取色生成流动渐变；另可在六种主题色中自选 |
 | 🪟 原生质感 | 自定义无边框标题栏，整体更像桌面应用而不是浏览器壳 |
+| 🎤 自动歌词 | 播放时自动识别歌曲并显示滚动歌词，支持 ±0.5s 校准、手动匹配与全文浏览 |
+| 📥 收藏夹导入 | 粘贴 B 站公开收藏夹链接，一键批量导入为本地歌单，自动跳过失效条目 |
+| ↕️ 拖拽排序 | 歌单、歌单内歌曲、收藏均可拖动调整顺序 |
+| 🪟 任务栏控制 | Windows 悬停任务栏图标即可上一首 / 播放暂停 / 下一首 |
+| 📐 侧栏可调 | 拖拽调节侧栏宽度，可折叠为纯图标模式，状态自动记住 |
 
 ## 🧠 技术亮点
 
@@ -103,6 +110,16 @@ B 站大量音乐资源本质上是多 P 合集。项目没有去推翻既有按
 
 结果是「听得越多、推得越准」，同时从架构上杜绝了大模型凭空捏造资源的风险。
 
+### 8. 搜索结果的本地相关性重排
+
+B 站搜索的 `totalrank` 排序优化的是点击率，对播放器来说结果并不理想：搜一首歌，几小时长的合集和二创会靠热度压过原曲。
+
+项目在拿到结果后做一层本地重排，四项加权打分：关键词覆盖率（主信号）、时长合理性（单曲加分、超长合集降权）、精确短语命中、以及 B 站原始位次（弱先验）。
+
+有两个细节值得一提：一是覆盖率用的是 `|K∩T| / |K|` 而非 Dice 系数——后者分母含标题长度，会误杀「【Hi-Res无损音质】吴昊《此去半生》…」这类带长前缀的精确匹配；二是重排开关由调用方显式传入，而不是从排序参数反推，避免以后新增排序选项时静默失效。
+
+整套打分是纯逻辑，带完整单测。
+
 ## 🔧 技术栈
 
 - **框架**： [Tauri v2](https://tauri.app/)
@@ -111,18 +128,22 @@ B 站大量音乐资源本质上是多 P 合集。项目没有去推翻既有按
 - **取流**：游客直链为主，[yt-dlp](https://github.com/yt-dlp/yt-dlp) 可选兜底
 - **本地数据**：JSON（收藏、歌单、搜索历史）
 
-> B 站接口整理参考了 [SocialSisterYi/bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect)，在此致谢。
-
+> **致谢**
+> - B 站接口整理参考了 [SocialSisterYi/bilibili-API-collect](https://github.com/SocialSisterYi/bilibili-API-collect)
+> - 歌词数据由第三方接口 [落月 API](https://doc.vkeys.cn/) 提供
 ## 📦 安装与运行
 
-> ⚠️ **平台说明**：目前仅在 **Windows 10 / 11** 上开发与验证。macOS / Linux 理论上 Tauri 可支持，但**未经测试**。
+> ⚠️ **平台说明**：主要在 **Windows 10 / 11** 上开发与验证；**macOS** 由协作者 [@liyu-1028](https://github.com/liyu-1028) 适配与测试，提供 Apple Silicon 与 Intel 两个版本。Linux 理论上 Tauri 可支持，但**未经测试**。
 
 ### 方式一：直接下载使用
 
-前往 [Releases](https://github.com/Jmiao11/bili-music/releases) 下载最新版压缩包，解压后运行文件夹内的 `bili-music.exe` 即可。
+前往 [Releases](https://github.com/Jmiao11/bili-music/releases) 下载对应平台的安装包：
+
+- **Windows**：下载 zip，解压后运行文件夹内的 `bili-music.exe`
+- **macOS**：Apple Silicon 下载 `arm64.dmg`，Intel 下载 `x64.dmg`。首次打开若提示「无法验证开发者」，在 Finder 中右键 App → 打开 → 再点「打开」
 
 - 免安装、免登录，默认纯游客模式，无需任何配置。
-- 收藏、歌单、搜索历史、听歌记录、AI 配置与背景图统一保存在系统用户目录 `%APPDATA%\bili-music\`，运行时不会在程序目录留下任何文件；在「设置 → 数据与隐私」可一键导出/导入这份数据，用于备份或换机迁移。
+- 统一保存在系统用户目录（Windows：`%APPDATA%\bili-music\`；macOS：`~/Library/Application Support/bili-music/`），运行时不会在程序目录留下任何文件
 
 ### 方式二：从源码构建
 
@@ -159,30 +180,6 @@ cargo tauri build
 
 > 🔒 `cookies.txt` 含登录态，已被 `.gitignore` 忽略，请勿提交。`yt-dlp` 兜底只用于覆盖极个别游客无法取流的视频，并非必需。
 
-## 🗂 项目结构
-
-- `src/`
-  - Rust 核心库
-  - 负责取流地基与 `yt-dlp` 解析复用
-- `src-tauri/`
-  - `src/main.rs`：Tauri 入口、命令注册、播放取消协调
-  - `src/guest_playurl.rs`：游客取流（`buvid` / `playurl`）
-  - `src/wbi.rs`：WBI 签名（搜索与 `playurl` 共用）
-  - `src/search.rs`：搜索
-  - `src/ranking.rs`：首页榜单
-  - `src/library.rs`：收藏 / 歌单 / 搜索历史
-  - `src/appearance.rs`：主题 / 背景图
-  - `tauri.conf.json`：Tauri 配置
-- `ui/`
-  - `index.html`：主界面结构
-  - `main.js`：播放队列、搜索、收藏、歌单、多 P 连播
-  - `appearance.js`：主题、设置、沉浸页
-  - `window-controls.js`：自定义标题栏窗口控制
-  - `styles.css`：样式
-- `design/`
-  - “午夜黑胶”设计稿与规范
-- `AGENTS.md`
-  - 项目“宪法”：模块边界与关键约束
 
 ## ⚖️ 法律声明与使用限制
 
