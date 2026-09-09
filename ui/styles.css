@@ -2329,6 +2329,12 @@ svg {
   align-items: center;
 }
 
+#view-playlists .playlist-create-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .playlist-layout {
   display: grid;
   min-height: 0;

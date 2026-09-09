@@ -2111,7 +2111,10 @@ function keepFocusInPagesModal(event) {
   }
 }
 
+let favoriteImportVersion = 0;
+
 function openLibraryModal(title, subtitle) {
+  favoriteImportVersion += 1;
   libraryModalTitle.textContent = title;
   libraryModalSubtitle.textContent = subtitle;
   libraryModalBody.replaceChildren();
@@ -2124,6 +2127,7 @@ function openLibraryModal(title, subtitle) {
 }
 
 function closeLibraryModal() {
+  favoriteImportVersion += 1;
   libraryModal.classList.remove("is-open");
   libraryModal.setAttribute("aria-hidden", "true");
 }
@@ -2243,6 +2247,97 @@ function showPlaylistNameDialog({ mode, playlist = null, track = null } = {}) {
 
 function createPlaylist() {
   showPlaylistNameDialog({ mode: "create" });
+}
+
+function importFavoritePlaylist() {
+  openLibraryModal("导入 B站收藏夹", "仅支持公开收藏夹，最多导入 200 个有效视频；失效或无法导入的条目将跳过。");
+  const version = favoriteImportVersion;
+  const active = () => version === favoriteImportVersion;
+  const { field: linkField, input: linkInput } = createNameField();
+  linkField.querySelector("span").textContent = "收藏夹链接";
+  linkInput.maxLength = 4096;
+  linkInput.placeholder = "https://space.bilibili.com/…/favlist?fid=…";
+  const { field: nameField, input: nameInput } = createNameField();
+  nameField.hidden = true;
+  let firstPage = null;
+  let busy = false;
+  const { actions, primaryButton } = createLibraryActions("读取收藏夹", async () => {
+    if (busy) return;
+    busy = true;
+    primaryButton.disabled = true;
+    try {
+      if (!firstPage) {
+        linkInput.disabled = true;
+        libraryModalStatus.textContent = "正在读取收藏夹第 1 页…";
+        const result = await invoke("read_public_favorite_page", { link: linkInput.value, page: 1, existing: [] });
+        if (!active()) return;
+        firstPage = result;
+        nameInput.value = Array.from(result.title).slice(0, 40).join("");
+        nameField.hidden = false;
+        primaryButton.textContent = "开始导入";
+        libraryModalStatus.textContent = `收藏夹共 ${result.total} 条，可修改歌单名称后导入。${Array.from(result.title).length > 40 ? "标题较长，请确认缩短后的名称。" : ""}`;
+        nameInput.focus();
+        nameInput.select();
+        return;
+      }
+      const validation = validatePlaylistName(nameInput.value);
+      if (!validation.ok) {
+        libraryModalStatus.textContent = validation.message;
+        nameInput.focus();
+        return;
+      }
+      nameInput.disabled = true;
+      const tracks = [];
+      let skipped = 0;
+      let duplicates = 0;
+      let scanned = 0;
+      let page = 1;
+      let result = firstPage;
+      while (active()) {
+        tracks.push(...result.items);
+        skipped += result.skipped;
+        duplicates += result.duplicates;
+        scanned += result.scanned;
+        libraryModalStatus.textContent = `已读取第 ${page} 页 · 已检查 ${scanned} 条 · 有效 ${tracks.length}/200 · 跳过 ${skipped} 条`;
+        if (!result.hasMore) break;
+        page += 1;
+        result = await invoke("read_public_favorite_page", {
+          link: linkInput.value, page, existing: tracks.map((track) => track.bvid),
+        });
+      }
+      if (!active()) return;
+      if (!tracks.length) {
+        libraryModalStatus.textContent = `没有可导入的视频，已跳过 ${skipped} 条，未创建歌单。`;
+        return;
+      }
+      libraryModalStatus.textContent = `正在保存 ${tracks.length} 条视频…`;
+      const created = await invoke("create_imported_playlist", { name: validation.name, tracks });
+      libraryState.playlists.push(created);
+      libraryState.selectedPlaylistId = created.id;
+      renderLibraryViews();
+      const summary = `已创建“${created.name}”，导入 ${created.items.length} 条，跳过失效或无法导入 ${skipped} 条${duplicates ? `，去重 ${duplicates} 条` : ""}。${result.truncated ? "已达到 200 条上限，剩余内容未导入。" : ""}`;
+      playlistsStatus.textContent = summary;
+      if (active()) closeLibraryModal();
+    } catch (error) {
+      if (active()) {
+        libraryModalStatus.textContent = `导入失败：${error}。未创建歌单，可重试。`;
+        if (!firstPage) linkInput.disabled = false;
+      }
+    } finally {
+      busy = false;
+      if (active()) {
+        primaryButton.disabled = false;
+        nameInput.disabled = false;
+      }
+    }
+  });
+  for (const input of [linkInput, nameInput]) {
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") { event.preventDefault(); primaryButton.click(); }
+    });
+  }
+  libraryModalBody.append(linkField, nameField, actions);
+  linkInput.focus();
 }
 
 function renameSelectedPlaylist() {
@@ -3111,6 +3206,7 @@ favoriteCurrentButton?.addEventListener("click", () => toggleFavorite());
 immersiveFavoriteButton?.addEventListener("click", () => toggleFavorite());
 document.querySelector("#immersive-add-playlist-button")?.addEventListener("click", () => choosePlaylistAndAdd());
 createPlaylistButton?.addEventListener("click", createPlaylist);
+document.querySelector("#import-playlist-button")?.addEventListener("click", importFavoritePlaylist);
 renamePlaylistButton?.addEventListener("click", renameSelectedPlaylist);
 deletePlaylistButton?.addEventListener("click", deleteSelectedPlaylist);
 refreshRankingButton?.addEventListener("click", () => {

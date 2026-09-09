@@ -2,6 +2,7 @@
 
 mod ai;
 mod appearance;
+mod fav_import;
 mod guest_playurl;
 mod library;
 mod lyrics;
@@ -67,6 +68,7 @@ struct AppState {
     proxy_base_url: String,
     search: SearchClient,
     ranking: RankingClient,
+    favorite_import: fav_import::FavoriteImportClient,
     ranking_cache: Arc<RwLock<Option<Vec<RankingTrack>>>>,
     guest: Arc<GuestPlayurlClient>,
     resolver: Arc<ResolveCoordinator>,
@@ -680,6 +682,8 @@ fn main() {
         .expect("failed to create the search client");
     let ranking =
         RankingClient::new(Arc::clone(&guest)).expect("failed to create the ranking client");
+    let favorite_import = fav_import::FavoriteImportClient::new(Arc::clone(&guest))
+        .expect("failed to create the favorite import client");
 
     tauri::Builder::default()
         .manage(AppState {
@@ -687,6 +691,7 @@ fn main() {
             proxy_base_url: format!("http://127.0.0.1:{port}"),
             search,
             ranking,
+            favorite_import,
             ranking_cache: Arc::new(RwLock::new(None)),
             guest,
             resolver: Arc::new(ResolveCoordinator::default()),
@@ -707,6 +712,8 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            fav_import::read_public_favorite_page,
+            library::create_imported_playlist,
             taskbar::set_taskbar_playback_state,
             prepare_audio,
             get_video_pages,

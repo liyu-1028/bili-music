@@ -692,7 +692,7 @@ pub(crate) fn write_json_atomic<T: Serialize>(target: &Path, value: &T) -> Resul
     Ok(())
 }
 
-fn snapshot_from_input(input: TrackSnapshotInput) -> Result<TrackSnapshot, String> {
+pub(crate) fn snapshot_from_input(input: TrackSnapshotInput) -> Result<TrackSnapshot, String> {
     Ok(TrackSnapshot {
         bvid: normalize_bvid(&input.bvid)?,
         title: clean_text(&input.title, "未命名视频"),
@@ -701,6 +701,132 @@ fn snapshot_from_input(input: TrackSnapshotInput) -> Result<TrackSnapshot, Strin
         duration_seconds: input.duration_seconds,
         added_at: now_string(),
     })
+}
+
+// Import uses the same reader, normalization and atomic writer as add_to_playlist.
+#[tauri::command]
+pub fn create_imported_playlist(
+    name: String,
+    tracks: Vec<TrackSnapshotInput>,
+) -> Result<Playlist, String> {
+    create_imported_playlist_at(&playlists_path()?, name, tracks)
+}
+
+fn create_imported_playlist_at(
+    path: &Path,
+    name: String,
+    tracks: Vec<TrackSnapshotInput>,
+) -> Result<Playlist, String> {
+    let mut file: PlaylistsFile = read_json_or_default(path)?;
+    let name = normalize_playlist_name(&name)?;
+    if file
+        .playlists
+        .iter()
+        .any(|item| item.name.trim().to_lowercase() == name.to_lowercase())
+    {
+        return Err("已存在同名歌单，请换个名字。".to_owned());
+    }
+    if tracks.is_empty() || tracks.len() > 200 {
+        return Err("导入歌单须包含 1 至 200 条视频。".to_owned());
+    }
+    let mut items: Vec<TrackSnapshot> = Vec::new();
+    for track in tracks {
+        let snapshot = snapshot_from_input(track)?;
+        if !items
+            .iter()
+            .any(|item| item.bvid.eq_ignore_ascii_case(&snapshot.bvid))
+        {
+            items.push(snapshot);
+        }
+    }
+    let playlist = Playlist {
+        id: format!("{}-{}", now_millis(), Uuid::new_v4().simple()),
+        name,
+        created_at: now_string(),
+        items,
+    };
+    file.playlists.push(playlist.clone());
+    write_json_atomic(path, &file)?;
+    Ok(playlist)
+}
+
+#[cfg(test)]
+mod import_tests {
+    use super::*;
+
+    fn input(bvid: &str) -> TrackSnapshotInput {
+        TrackSnapshotInput {
+            bvid: bvid.into(),
+            title: "  歌名  ".into(),
+            uploader: "  ".into(),
+            thumbnail_url: " https://example.com/cover.jpg ".into(),
+            duration_seconds: 12,
+        }
+    }
+
+    #[test]
+    fn import_normalizes_deduplicates_and_preserves_existing_playlists() {
+        let path = std::env::temp_dir().join(format!("bili-import-{}.json", Uuid::new_v4()));
+        let first =
+            create_imported_playlist_at(&path, "原歌单".into(), vec![input("BV1rW4y1Q7o7")])
+                .unwrap();
+        let created = create_imported_playlist_at(
+            &path,
+            "  新歌单  ".into(),
+            vec![input("BV1rW4y1Q7o7"), input("BV1RW4Y1Q7O7")],
+        )
+        .unwrap();
+        assert_eq!(created.name, "新歌单");
+        assert_eq!(created.items.len(), 1);
+        assert_eq!(created.items[0].title, "歌名");
+        assert_eq!(created.items[0].uploader, "未知 UP 主");
+        assert_eq!(
+            created.items[0].thumbnail_url,
+            "https://example.com/cover.jpg"
+        );
+        let file: PlaylistsFile = read_json_or_default(&path).unwrap();
+        assert_eq!(file.version, VERSION);
+        assert_eq!(file.playlists.len(), 2);
+        assert_eq!(file.playlists[0].id, first.id);
+        let before = fs::read(&path).unwrap();
+        assert!(
+            create_imported_playlist_at(&path, "新歌单".into(), vec![input("BV1rW4y1Q7o7")])
+                .is_err()
+        );
+        assert!(create_imported_playlist_at(
+            &path,
+            "坏输入".into(),
+            vec![input("BV1rW4y1Q7o7"), input("bad")]
+        )
+        .is_err());
+        assert_eq!(fs::read(&path).unwrap(), before);
+        fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn import_rejects_bad_files_and_invalid_sizes_without_writing() {
+        let path = std::env::temp_dir().join(format!("bili-import-{}.json", Uuid::new_v4()));
+        for contents in ["broken", r#"{"version":999,"playlists":[]}"#] {
+            fs::write(&path, contents).unwrap();
+            assert!(
+                create_imported_playlist_at(&path, "歌单".into(), vec![input("BV1rW4y1Q7o7")])
+                    .is_err()
+            );
+            assert_eq!(fs::read_to_string(&path).unwrap(), contents);
+        }
+        fs::remove_file(&path).unwrap();
+        assert!(create_imported_playlist_at(&path, "歌单".into(), vec![]).is_err());
+        assert!(create_imported_playlist_at(
+            &path,
+            "歌单".into(),
+            (0..201).map(|_| input("BV1rW4y1Q7o7")).collect()
+        )
+        .is_err());
+        assert!(
+            create_imported_playlist_at(&path, " ".into(), vec![input("BV1rW4y1Q7o7")]).is_err()
+        );
+        assert!(!path.exists());
+    }
 }
 
 fn normalize_bvid(value: &str) -> Result<String, String> {
