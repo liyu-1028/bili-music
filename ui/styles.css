@@ -4128,7 +4128,9 @@ input[type="range"]::-webkit-slider-thumb {
   --immersive-offset-width: 40px;
   --immersive-offset-size: 11px;
   --immersive-left-gap: 8px;
-  --immersive-control-gap: 10px 8px;
+  /* 沉浸页左栏底部三个操作按钮之间的横向间距，可 live 调。 */
+  --immersive-actions-gap: 10px;
+  --immersive-control-gap: 10px var(--immersive-actions-gap);
   /* 渐隐只改变透明度；同高留白保护滚动到头/尾时的首末行。 */
   --lyrics-fade-height: 32px;
   display: grid;
@@ -4159,7 +4161,7 @@ input[type="range"]::-webkit-slider-thumb {
     --immersive-calibration-height: 26px;
     --immersive-calibration-size: 11px;
     --immersive-left-gap: 6px;
-    --immersive-control-gap: 8px 6px;
+    --immersive-control-gap: 8px var(--immersive-actions-gap);
     --lyrics-fade-height: 24px;
   }
 }
@@ -4681,11 +4683,17 @@ input[type="range"]::-webkit-slider-thumb {
     width: 100%;
     max-width: var(--immersive-details-max);
     grid-area: player;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    /* 操作按钮三列按内容宽度，两侧 1fr 负责把整组推到中间。 */
+    grid-template-columns: 1fr repeat(3, auto) 1fr;
     align-self: start;
     justify-self: center;
     justify-content: center;
     gap: var(--immersive-control-gap);
+  }
+
+  /* 让三个操作按钮从第二列开始自动填充，避免被放进左侧 1fr 占位列。 */
+  #open-bilibili-button {
+    grid-column: 2;
   }
 
   .immersive-controls .transport-controls,
