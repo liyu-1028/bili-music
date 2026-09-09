@@ -106,6 +106,8 @@ pub struct StreamAudioInfo {
     pub uploader: String,
     pub thumbnail_url: String,
     pub duration_seconds: f64,
+    /// 新投稿 DASH 音轨未转码时的 durl 混合流兜底标记；仅供日志与诊断，不参与逻辑分支。
+    pub muxed_preview: bool,
 }
 
 #[derive(Debug)]
@@ -322,6 +324,7 @@ pub fn resolve_bilibili_audio_cancellable_with_page(
         uploader: parsed.uploader,
         thumbnail_url: parsed.thumbnail_url,
         duration_seconds: parsed.duration_seconds,
+        muxed_preview: false,
     })
 }
 

@@ -107,8 +107,27 @@ impl GuestPlayurlClient {
             fetch_playurl(&self.client, bvid, target_cid, &cookie_header, &mixin_key).await?;
         ensure_not_cancelled(cancellation)?;
 
-        let audio = select_audio(playurl.data.as_ref())?;
-        let audio_url = first_working_audio_url(&self.client, audio).await?;
+        // DASH 音频轨优先；新投稿可能只有 durl 混合流，作为兜底。
+        let (audio_url, muxed_preview) = match select_audio(playurl.data.as_ref()) {
+            Ok(audio) => {
+                let audio_url = first_working_audio_url(&self.client, audio).await?;
+                (audio_url.to_owned(), false)
+            }
+            Err(audio_error) => {
+                let durl = select_muxed_durl(playurl.data.as_ref());
+                match durl {
+                    Ok(durl) => {
+                        let url = first_working_muxed_url(&self.client, durl).await?;
+                        (url, true)
+                    }
+                    Err(durl_error) => {
+                        return Err(format!(
+                            "{audio_error}; durl fallback unavailable: {durl_error}"
+                        ));
+                    }
+                }
+            }
+        };
         ensure_not_cancelled(cancellation)?;
 
         let title = page_hint
@@ -124,11 +143,12 @@ impl GuestPlayurlClient {
             .unwrap_or(view.duration_seconds);
 
         Ok(StreamAudioInfo {
-            audio_url: audio_url.to_owned(),
+            audio_url,
             title,
             uploader: view.uploader,
             thumbnail_url: normalize_url(&view.thumbnail_url),
             duration_seconds: duration_seconds as f64,
+            muxed_preview,
         })
     }
 
@@ -229,7 +249,7 @@ async fn first_working_audio_url<'a>(
     client: &reqwest::Client,
     audio: &'a AudioStream,
 ) -> Result<&'a str, String> {
-    let candidates = audio.url_candidates();
+    let candidates = ordered_candidates(audio);
     if candidates.is_empty() {
         return Err(format!(
             "selected audio id {} has no baseUrl/base_url or backup URLs",
@@ -247,6 +267,35 @@ async fn first_working_audio_url<'a>(
     Err(format!(
         "all audio URLs for id {} failed probe: {}",
         audio.id,
+        last_error.unwrap_or_else(|| "unknown probe failure".to_owned())
+    ))
+}
+
+/// durl 兜底专用：逐个候选 probe，且必须验证 MP4 签名（ftyp），
+/// 老 FLV durl 交给 `<audio>` 播不了，宁可失败走现有跳过逻辑。
+async fn first_working_muxed_url(
+    client: &reqwest::Client,
+    durl: &DurlStream,
+) -> Result<String, String> {
+    let candidates = durl.url_candidates();
+    if candidates.is_empty() {
+        return Err("durl entry has no baseUrl/url".to_owned());
+    }
+
+    let mut last_error = None;
+    for candidate in candidates {
+        match probe_audio_url(client, candidate).await {
+            Ok(probe) => {
+                if probe.looks_mp4() {
+                    return Ok(normalize_url(candidate));
+                }
+                last_error = Some("durl stream is not MP4 (unsupported container)".to_owned());
+            }
+            Err(error) => last_error = Some(error),
+        }
+    }
+    Err(format!(
+        "all durl URLs failed probe: {}",
         last_error.unwrap_or_else(|| "unknown probe failure".to_owned())
     ))
 }
@@ -550,6 +599,42 @@ fn select_audio(data: Option<&PlayurlData>) -> Result<&AudioStream, String> {
         })
 }
 
+/// 新投稿兜底：DASH 音频轨缺失时，回退到 durl 混合流（音视频合一的渐进式 mp4）。
+/// `<audio>` 元素只出音轨，但老视频可能是 FLV 容器，需要 probe 后验证 MP4 签名。
+fn select_muxed_durl(data: Option<&PlayurlData>) -> Result<&DurlStream, String> {
+    let durl = data
+        .and_then(|data| {
+            if data.durl.is_empty() {
+                None
+            } else {
+                Some(&data.durl)
+            }
+        })
+        .ok_or_else(|| "Bilibili playurl response has no data.durl".to_owned())?;
+    Ok(&durl[0])
+}
+
+/// mcdn 边缘节点（P2P 风格 CDN 池）存活时间极短：探测时可能存活、
+/// 播放器真正取流时已 404。因此稳定镜像优先，mcdn 仅作无替代时的兑底。
+fn is_volatile_mcdn_host(url: &str) -> bool {
+    url.split_once("//")
+        .and_then(|(_, rest)| rest.split('/').next())
+        .map(|host| {
+            let host = host.split('@').next().unwrap_or(host);
+            host.contains("mcdn.")
+        })
+        .unwrap_or(false)
+}
+
+/// 候选重排：稳定镜像保序在前，mcdn 节点沉到末尾（组内保序）。
+fn ordered_candidates(audio: &AudioStream) -> Vec<&str> {
+    let (stable, volatile): (Vec<&str>, Vec<&str>) = audio
+        .url_candidates()
+        .into_iter()
+        .partition(|url| !is_volatile_mcdn_host(url));
+    stable.into_iter().chain(volatile).collect()
+}
+
 async fn probe_audio_url(client: &reqwest::Client, audio_url: &str) -> Result<ProbeResult, String> {
     let response = client
         .get(audio_url)
@@ -567,14 +652,14 @@ async fn probe_audio_url(client: &reqwest::Client, audio_url: &str) -> Result<Pr
     let bytes = response
         .bytes()
         .await
-        .map_err(|error| format!("failed to read audio probe bytes: {error}"))?
-        .len();
-    if bytes == 0 {
+        .map_err(|error| format!("failed to read audio probe bytes: {error}"))?;
+    if bytes.is_empty() {
         return Err("audio URL probe returned zero bytes".to_owned());
     }
     Ok(ProbeResult {
         status: status.as_u16(),
-        bytes,
+        bytes: bytes.len(),
+        head: bytes[..bytes.len().min(16)].to_vec(),
     })
 }
 
@@ -628,6 +713,14 @@ fn unix_timestamp() -> u64 {
 struct ProbeResult {
     status: u16,
     bytes: usize,
+    head: Vec<u8>,
+}
+
+impl ProbeResult {
+    /// MP4 文件在偏移 4~8 字节处有 "ftyp" 盒类型标识。
+    fn looks_mp4(&self) -> bool {
+        self.head.len() >= 8 && &self.head[4..8] == b"ftyp"
+    }
 }
 
 #[derive(Deserialize)]
@@ -696,6 +789,47 @@ struct PlayurlEnvelope {
 #[derive(Deserialize)]
 struct PlayurlData {
     dash: Option<DashData>,
+    /// 新投稿在音频轨转码完成前，playurl 可能只返回 durl（音视频混合流）。
+    #[serde(default)]
+    durl: Vec<DurlStream>,
+}
+
+#[derive(Debug, Deserialize)]
+struct DurlStream {
+    #[serde(default, rename = "baseUrl")]
+    base_url_camel: Option<String>,
+    #[serde(default, rename = "base_url")]
+    base_url_snake: Option<String>,
+    #[serde(default)]
+    url: Option<String>,
+    #[serde(default, rename = "backupUrl")]
+    backup_url_camel: Vec<String>,
+    #[serde(default, rename = "backup_url")]
+    backup_url_snake: Vec<String>,
+}
+
+impl DurlStream {
+    fn url_candidates(&self) -> Vec<&str> {
+        let mut candidates = Vec::new();
+        if let Some(url) = self
+            .base_url_camel
+            .as_deref()
+            .or(self.base_url_snake.as_deref())
+            .or(self.url.as_deref())
+        {
+            if !url.trim().is_empty() {
+                candidates.push(url);
+            }
+        }
+        candidates.extend(
+            self.backup_url_camel
+                .iter()
+                .chain(self.backup_url_snake.iter())
+                .map(String::as_str)
+                .filter(|url| !url.trim().is_empty()),
+        );
+        candidates
+    }
 }
 
 #[derive(Deserialize)]
@@ -764,7 +898,10 @@ impl AudioStream {
 
 #[cfg(test)]
 mod tests {
-    use super::{select_audio, AudioStream, DashData, PlayurlData};
+    use super::{
+        ordered_candidates, select_audio, select_muxed_durl, AudioStream, DashData, DurlStream,
+        PlayurlData, ProbeResult,
+    };
 
     #[test]
     fn prefers_medium_aac_then_low_aac() {
@@ -792,6 +929,7 @@ mod tests {
             dash: Some(DashData {
                 audio: vec![low, medium],
             }),
+            durl: vec![],
         };
 
         assert_eq!(select_audio(Some(&data)).unwrap().id, 30232);
@@ -801,6 +939,7 @@ mod tests {
     fn rejects_missing_audio_streams_clearly() {
         let data = PlayurlData {
             dash: Some(DashData { audio: vec![] }),
+            durl: vec![],
         };
 
         assert!(select_audio(Some(&data))
@@ -809,5 +948,117 @@ mod tests {
         assert!(select_audio(None)
             .unwrap_err()
             .contains("no data.dash.audio"));
+    }
+
+    #[test]
+    fn falls_back_to_durl_only_for_fresh_uploads() {
+        let data = PlayurlData {
+            dash: None,
+            durl: vec![DurlStream {
+                base_url_camel: None,
+                base_url_snake: Some("https://upos.example.bilivideo.com/m.mp4".to_owned()),
+                url: None,
+                backup_url_camel: vec![
+                    "".to_owned(),
+                    "https://backup.example.bilivideo.com/b.mp4".to_owned(),
+                ],
+                backup_url_snake: vec![],
+            }],
+        };
+
+        assert!(select_audio(Some(&data)).is_err());
+        let candidates = select_muxed_durl(Some(&data)).unwrap().url_candidates();
+        assert_eq!(
+            candidates,
+            vec![
+                "https://upos.example.bilivideo.com/m.mp4",
+                "https://backup.example.bilivideo.com/b.mp4",
+            ]
+        );
+    }
+
+    #[test]
+    fn durl_fallback_reports_missing_durl_clearly() {
+        let data = PlayurlData {
+            dash: Some(DashData { audio: vec![] }),
+            durl: vec![],
+        };
+
+        let error = select_muxed_durl(Some(&data)).unwrap_err();
+        assert!(error.contains("no data.durl"));
+    }
+
+    #[test]
+    fn probe_head_detects_mp4_signature() {
+        let mp4 = ProbeResult {
+            status: 206,
+            bytes: 4096,
+            head: vec![0, 0, 0, 24, b'f', b't', b'y', b'p', b'i', b's', b'o', b'm'],
+        };
+        assert!(mp4.looks_mp4());
+
+        let flv = ProbeResult {
+            status: 206,
+            bytes: 4096,
+            head: vec![b'F', b'L', b'V', 1, 5, 0, 0, 0, 9],
+        };
+        assert!(!flv.looks_mp4());
+
+        let short = ProbeResult {
+            status: 206,
+            bytes: 4,
+            head: vec![0, 0, 0, 24],
+        };
+        assert!(!short.looks_mp4());
+    }
+
+    #[test]
+    fn candidates_prefer_stable_mirrors_over_mcdn() {
+        let audio = audio_stream(vec![
+            "https://xy113x207x85x153xy.mcdn.bilivideo.cn:8082/base.mp4",
+            "https://upos-sz-mirrorcos.bilivideo.com/backup1.mp4",
+            "https://cn-sccd-ct-02-11.bilivideo.com/backup2.mp4",
+            "https://xy116x196x140x19xy.mcdn.bilivideo.cn/base3.mp4",
+        ]);
+
+        assert_eq!(
+            ordered_candidates(&audio),
+            vec![
+                "https://upos-sz-mirrorcos.bilivideo.com/backup1.mp4",
+                "https://cn-sccd-ct-02-11.bilivideo.com/backup2.mp4",
+                "https://xy113x207x85x153xy.mcdn.bilivideo.cn:8082/base.mp4",
+                "https://xy116x196x140x19xy.mcdn.bilivideo.cn/base3.mp4",
+            ]
+        );
+    }
+
+    #[test]
+    fn all_mcdn_candidates_still_usable_in_original_order() {
+        let audio = audio_stream(vec![
+            "https://xy1x1x1x1xy.mcdn.bilivideo.cn/a.mp4",
+            "https://xy2x2x2x2xy.mcdn.bilivideo.cn/b.mp4",
+        ]);
+
+        assert_eq!(
+            ordered_candidates(&audio),
+            vec![
+                "https://xy1x1x1x1xy.mcdn.bilivideo.cn/a.mp4",
+                "https://xy2x2x2x2xy.mcdn.bilivideo.cn/b.mp4",
+            ]
+        );
+    }
+
+    fn audio_stream(urls: Vec<&str>) -> AudioStream {
+        let mut iter = urls.into_iter();
+        AudioStream {
+            id: 30232,
+            base_url_camel: iter.next().map(str::to_owned),
+            base_url_snake: None,
+            backup_url_camel: iter.map(str::to_owned).collect(),
+            backup_url_snake: vec![],
+            codecs: Some("mp4a.40.2".to_owned()),
+            mime_type_camel: Some("audio/mp4".to_owned()),
+            mime_type_snake: None,
+        }
     }
 }
