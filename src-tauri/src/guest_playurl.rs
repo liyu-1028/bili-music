@@ -108,27 +108,26 @@ impl GuestPlayurlClient {
         ensure_not_cancelled(cancellation)?;
 
         // DASH 音频轨优先；新投稿可能只有 durl 混合流，作为兜底。
-        let (audio_url, muxed_preview) =
-            match select_audio(playurl.data.as_ref()) {
-                Ok(audio) => {
-                    let audio_url = first_working_audio_url(&self.client, audio).await?;
-                    (audio_url.to_owned(), false)
-                }
-                Err(audio_error) => {
-                    let durl = select_muxed_durl(playurl.data.as_ref());
-                    match durl {
-                        Ok(durl) => {
-                            let url = first_working_muxed_url(&self.client, durl).await?;
-                            (url, true)
-                        }
-                        Err(durl_error) => {
-                            return Err(format!(
-                                "{audio_error}; durl fallback unavailable: {durl_error}"
-                            ));
-                        }
+        let (audio_url, muxed_preview) = match select_audio(playurl.data.as_ref()) {
+            Ok(audio) => {
+                let audio_url = first_working_audio_url(&self.client, audio).await?;
+                (audio_url.to_owned(), false)
+            }
+            Err(audio_error) => {
+                let durl = select_muxed_durl(playurl.data.as_ref());
+                match durl {
+                    Ok(durl) => {
+                        let url = first_working_muxed_url(&self.client, durl).await?;
+                        (url, true)
+                    }
+                    Err(durl_error) => {
+                        return Err(format!(
+                            "{audio_error}; durl fallback unavailable: {durl_error}"
+                        ));
                     }
                 }
-            };
+            }
+        };
         ensure_not_cancelled(cancellation)?;
 
         let title = page_hint
@@ -604,7 +603,13 @@ fn select_audio(data: Option<&PlayurlData>) -> Result<&AudioStream, String> {
 /// `<audio>` 元素只出音轨，但老视频可能是 FLV 容器，需要 probe 后验证 MP4 签名。
 fn select_muxed_durl(data: Option<&PlayurlData>) -> Result<&DurlStream, String> {
     let durl = data
-        .and_then(|data| if data.durl.is_empty() { None } else { Some(&data.durl) })
+        .and_then(|data| {
+            if data.durl.is_empty() {
+                None
+            } else {
+                Some(&data.durl)
+            }
+        })
         .ok_or_else(|| "Bilibili playurl response has no data.durl".to_owned())?;
     Ok(&durl[0])
 }
@@ -953,7 +958,10 @@ mod tests {
                 base_url_camel: None,
                 base_url_snake: Some("https://upos.example.bilivideo.com/m.mp4".to_owned()),
                 url: None,
-                backup_url_camel: vec!["".to_owned(), "https://backup.example.bilivideo.com/b.mp4".to_owned()],
+                backup_url_camel: vec![
+                    "".to_owned(),
+                    "https://backup.example.bilivideo.com/b.mp4".to_owned(),
+                ],
                 backup_url_snake: vec![],
             }],
         };

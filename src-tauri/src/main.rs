@@ -543,7 +543,8 @@ async fn proxy_audio(
     if !(status.is_success() || status.as_u16() == 206) {
         eprintln!(
             "[audio-proxy] upstream returned HTTP {} for {}",
-            status.as_u16(), upstream_host
+            status.as_u16(),
+            upstream_host
         );
     }
     let mut response = Response::builder()
