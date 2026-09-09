@@ -3605,6 +3605,50 @@ input[type="range"]::-webkit-slider-thumb {
   background: var(--accent-dim);
 }
 
+#accent-color-settings .accent-option {
+  position: relative;
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 8px;
+  justify-items: center;
+  padding: 8px 0;
+  color: var(--text-2);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+#accent-color-settings .accent-option:hover {
+  color: var(--text-1);
+}
+
+#accent-color-settings .accent-dot {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 50%;
+}
+
+#accent-color-settings input:checked + .accent-dot {
+  outline: 2px solid var(--text-1);
+  outline-offset: 3px;
+}
+
+#accent-color-settings input:checked + .accent-dot::after {
+  content: "";
+  width: 10px;
+  height: 6px;
+  border: solid #0a0a0b;
+  border-width: 0 0 2px 2px;
+  transform: rotate(-45deg);
+}
+
+#accent-color-settings input:focus-visible + .accent-dot {
+  outline: 2px dashed var(--text-1);
+  outline-offset: 5px;
+}
+
 .mascot-picker {
   display: flex;
   flex-wrap: wrap;

@@ -2,6 +2,16 @@ const { invoke: invokeAppearance } = window.__TAURI__.core;
 
 const BACKGROUND_PATH_KEY = "bilibili-music.background-path";
 const THEME_KEY = "bilibili-music.theme";
+const ACCENT_COLOR_KEY = "bilibili-music.accent-color";
+const ACCENT_COLORS = {
+  pink: { dark: [251, 114, 153], light: [164, 41, 76] },
+  blue: { dark: [122, 166, 231], light: [40, 88, 161] },
+  purple: { dark: [189, 145, 236], light: [120, 48, 194] },
+  green: { dark: [87, 185, 65], light: [40, 102, 25] },
+  orange: { dark: [224, 146, 77], light: [128, 77, 32] },
+  cyan: { dark: [73, 178, 191], light: [27, 98, 106] },
+};
+let currentAccentColor = "pink";
 const GLASS_BLUR_KEY = "bilibili-music.glass-blur";
 const PANEL_ALPHA_KEY = "bilibili-music.panel-alpha";
 const BACKGROUND_DIM_KEY = "bilibili-music.background-dim";
@@ -19,6 +29,7 @@ const settingsModal = document.querySelector("#settings-modal");
 const openSettingsButton = document.querySelector("#open-settings-button");
 const closeSettingsButton = document.querySelector("#close-settings-button");
 const themeOptions = [...document.querySelectorAll("[data-theme-option]")];
+const accentColorOptions = [...document.querySelectorAll("[data-accent-color]")];
 const mascotPicker = document.querySelector("#mascot-picker");
 const chooseBackgroundButton = document.querySelector("#choose-background-button");
 const resetBackgroundButton = document.querySelector("#reset-background-button");
@@ -487,6 +498,51 @@ function setActiveView(view) {
   );
 }
 
+function normalizeAccentColor(value) {
+  return typeof value === "string" && Object.hasOwn(ACCENT_COLORS, value) ? value : "pink";
+}
+
+function readAccentColor() {
+  try {
+    return normalizeAccentColor(localStorage.getItem(ACCENT_COLOR_KEY));
+  } catch {
+    return "pink";
+  }
+}
+
+function accentChannels(color, theme) {
+  return ACCENT_COLORS[normalizeAccentColor(color)][theme === "light" ? "light" : "dark"];
+}
+
+function applyAccentColor(value, persist = true) {
+  const color = normalizeAccentColor(value);
+  currentAccentColor = color;
+  accentChannels(color, root.dataset.theme).forEach((channel, index) => {
+    root.style.setProperty(`--accent-${["r", "g", "b"][index]}`, String(channel));
+  });
+  for (const option of accentColorOptions) {
+    option.checked = option.value === color;
+    option.nextElementSibling.style.backgroundColor = `rgb(${accentChannels(option.value, root.dataset.theme).join(", ")})`;
+  }
+  if (persist) {
+    try {
+      localStorage.setItem(ACCENT_COLOR_KEY, color);
+    } catch {
+      // 存储不可用时仍保留本次运行的选择。
+    }
+  }
+}
+
+function initializeAccentColor() {
+  for (const option of accentColorOptions) {
+    option.addEventListener("change", () => applyAccentColor(option.value));
+  }
+  applyAccentColor(readAccentColor(), false);
+  // data-theme 的变更在下一次绘制前同步变体，不改主题切换与动态背景逻辑。
+  new MutationObserver(() => applyAccentColor(currentAccentColor, false))
+    .observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+}
+
 function applyTheme(theme, persist = true) {
   const safeTheme = ["dark", "light", "image", "dynamic"].includes(theme) ? theme : "dark";
   root.dataset.theme = safeTheme;
@@ -932,6 +988,7 @@ playerAudio.addEventListener("emptied", () => {
   syncMediaSessionPlaybackState("none");
 });
 
+initializeAccentColor();
 applyTheme(localStorage.getItem(THEME_KEY), false);
 applyVolume(localStorage.getItem(VOLUME_KEY), false);
 updateProgress(0);
