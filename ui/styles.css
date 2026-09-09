@@ -2095,6 +2095,11 @@ svg {
   --list-actions-width: 136px;
 }
 
+/* 选中背景由外层整行提供，避免内容列重复叠色。 */
+:is(#home-ranking-list, #search-results, #favorites-list, #playlist-tracks) .track[aria-current="true"] {
+  background: transparent;
+}
+
 :is(#home-ranking-list, #search-results, #favorites-list, #playlist-tracks) .track-title {
   font-size: 15px;
   font-weight: 600;
