@@ -8,7 +8,7 @@
   <p>一个免登录、不落盘的 B 站音乐播放器。把哔哩哔哩当作你的曲库，听歌不必登录，不必下载。</p>
 </div>
 
-<div>
+<div align="center">
   <img src="screenshots/home.png" width="640" alt="Bili Music 主界面" />
   <img src="screenshots/lyrics.png" width="640" alt="Bili Music 沉浸播放页与歌词" />
   <img src="screenshots/settings.png" width="640" alt="Bili Music 设置" />
