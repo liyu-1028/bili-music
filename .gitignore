@@ -19,6 +19,9 @@ search-history.json
 ai-config.json
 .vs/
 
+# webstorm工程文件
+.idea
+
 # 依赖与杂项
 node_modules/
 .DS_Store
