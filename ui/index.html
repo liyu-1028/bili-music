@@ -9,6 +9,7 @@
       document.documentElement.dataset.platform = /Macintosh|Mac OS X/i.test(navigator.userAgent) ? "macos" : "windows";
     </script>
     <link rel="stylesheet" href="./styles.css" />
+    <script src="./sidebar.js"></script>
   </head>
   <body>
     <div class="dynamic-background" aria-hidden="true">
@@ -47,7 +48,7 @@
       <span class="window-resize-handle window-resize-sw" data-resize-direction="southWest"></span>
     </div>
     <div class="app-shell">
-      <aside class="sidebar panel" aria-label="侧边栏">
+      <aside id="sidebar" class="sidebar panel" aria-label="侧边栏">
         <header class="brand">
           <span class="brand-mark" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M9 18V6l10-2v11.2a3 3 0 1 1-2-2.83V7.1l-6 1.2V17a3 3 0 1 1-2-2.83Z" /></svg>
@@ -83,11 +84,16 @@
         </nav>
 
         <div class="sidebar-foot">
+          <button id="sidebar-toggle" class="nav-item" type="button" aria-controls="sidebar" aria-expanded="true" aria-label="收起侧栏" title="收起侧栏">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4Zm2 2v12h12V6Zm3 0h2v12H9Zm7 3-3 3 3 3 1.4-1.4-1.6-1.6 1.6-1.6Z" /></svg>
+            <span>收起侧栏</span>
+          </button>
           <button id="open-settings-button" class="nav-item" type="button">
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M19.4 13.5a7.8 7.8 0 0 0 .1-1.5 7.8 7.8 0 0 0-.1-1.5l2-1.5-2-3.5-2.4 1a8 8 0 0 0-2.6-1.5L14 2h-4l-.4 3a8 8 0 0 0-2.6 1.5l-2.4-1-2 3.5 2 1.5a7.8 7.8 0 0 0-.1 1.5c0 .5 0 1 .1 1.5l-2 1.5 2 3.5 2.4-1a8 8 0 0 0 2.6 1.5l.4 3h4l.4-3a8 8 0 0 0 2.6-1.5l2.4 1 2-3.5ZM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z" /></svg>
             <span>设置</span>
           </button>
         </div>
+        <div id="sidebar-resize" role="separator" aria-label="调整侧栏宽度" aria-orientation="vertical" aria-controls="sidebar" aria-valuemin="72" aria-valuemax="320" aria-valuenow="260" tabindex="0"></div>
       </aside>
 
       <main class="main-panel panel" aria-labelledby="queue-heading">

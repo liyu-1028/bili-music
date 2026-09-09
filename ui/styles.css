@@ -36,6 +36,9 @@
   --line-strong: rgba(255, 255, 255, 0.12);
   --shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
   --titlebar-height: 34px;
+  --sidebar-width: 220px;
+  --shell-inset: 14px;
+  --shell-gap: 14px;
   --z-notice: 4;
   --z-player: 20;
   --z-titlebar: 30;
@@ -531,11 +534,12 @@ svg {
 
 .app-shell {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
-  gap: 14px;
+  gap: var(--shell-gap);
   height: calc(100dvh - var(--titlebar-height) - 120px);
-  padding: 12px 14px 0;
+  padding: 12px var(--shell-inset) 0;
+  transition: grid-template-columns 180ms ease;
 }
 
 .panel {
@@ -554,10 +558,83 @@ svg {
 }
 
 .sidebar {
+  position: relative;
   display: flex;
+  min-width: 0;
   min-height: 0;
   flex-direction: column;
   padding: 22px 16px;
+  transition: padding 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+#sidebar .brand-mark {
+  flex-shrink: 0;
+}
+
+#sidebar .brand > span:last-child,
+#sidebar .nav-item > span {
+  white-space: nowrap;
+}
+
+#sidebar .brand,
+#sidebar .nav-item {
+  overflow: hidden;
+}
+
+#sidebar-resize {
+  position: absolute;
+  top: 12px;
+  right: -3px;
+  bottom: 12px;
+  width: 6px;
+  border-radius: 3px;
+  cursor: col-resize;
+  touch-action: none;
+  transition: background 150ms ease;
+}
+
+#sidebar-resize:hover,
+#sidebar-resize:focus-visible,
+:root[data-sidebar-dragging="true"] #sidebar-resize {
+  background: var(--line-strong);
+}
+
+#sidebar-toggle svg {
+  transition: transform 180ms ease;
+}
+
+:root[data-sidebar-collapsed="true"] #sidebar {
+  padding-inline: 8px;
+}
+
+:root[data-sidebar-collapsed="true"] #sidebar .brand {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+:root[data-sidebar-collapsed="true"] #sidebar .brand > span:last-child,
+:root[data-sidebar-collapsed="true"] #sidebar .nav-item > :is(span, small) {
+  display: none;
+}
+
+:root[data-sidebar-collapsed="true"] #sidebar .nav-item {
+  justify-content: center;
+  gap: 0;
+  padding-inline: 0;
+}
+
+:root[data-sidebar-collapsed="true"] #sidebar-toggle svg {
+  transform: rotate(180deg);
+}
+
+:root[data-sidebar-dragging="true"],
+:root[data-sidebar-dragging="true"] * {
+  cursor: col-resize;
+  user-select: none;
+}
+
+:root[data-sidebar-dragging="true"] :is(.app-shell, #sidebar, #sidebar *, .player-bar, #mascot-stage, #mascot-bubble) {
+  transition: none;
 }
 
 .brand {
@@ -1309,7 +1386,7 @@ svg {
 
 #view-search .search-command-panel {
   display: grid;
-  grid-template-columns: minmax(210px, 0.62fr) minmax(480px, 1.38fr);
+  grid-template-columns: minmax(210px, 0.62fr) minmax(0, 1.38fr);
   align-items: center;
   gap: 18px;
   min-height: 92px;
@@ -1407,6 +1484,7 @@ svg {
 }
 
 #view-search .searchbar svg {
+  flex-shrink: 0;
   width: 18px;
   height: 18px;
   color: var(--text-2);
@@ -1421,6 +1499,8 @@ svg {
 }
 
 #view-search .search-hint {
+  width: 96px;
+  justify-content: center;
   min-height: 26px;
   display: inline-flex;
   align-items: center;
@@ -1433,6 +1513,7 @@ svg {
 }
 
 #view-search .search-submit {
+  flex-shrink: 0;
   min-width: 68px;
   height: 32px;
   border: 0.5px solid var(--line-strong);
@@ -2752,28 +2833,45 @@ svg {
 .player-bar {
   position: fixed;
   z-index: var(--z-player);
-  right: calc(14px + env(safe-area-inset-right));
+  right: calc(var(--shell-inset) + env(safe-area-inset-right));
   bottom: calc(14px + env(safe-area-inset-bottom));
-  left: 288px;
+  left: calc(var(--shell-inset) + var(--sidebar-width) + var(--shell-gap));
   display: grid;
-  /* 左 / 中 / 右：中栏固定为进度条宽度，左右按 0.8 : 1 分配余量。 */
-  grid-template-columns: minmax(190px, 0.8fr) 340px minmax(210px, 1fr);
+  /* 工具栏先保留内容宽度，进度区可缩至五个播放按钮所需的 234px。 */
+  grid-template-columns: minmax(120px, 0.8fr) minmax(234px, 340px) minmax(max-content, 1fr);
   min-height: 92px;
   align-items: center;
   gap: 20px;
   padding: 0 24px;
+  transition: left 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+.player-bar .timeline {
+  width: 100%;
+}
+
+.player-bar .right-tools {
+  /* 半像素边框按两侧合计 2px 预留，兼容 WebView 的像素取整。 */
+  max-width: calc(100vw - var(--sidebar-width) - 486px);
+  flex-wrap: wrap;
+}
+
+.player-bar .right-tools > * {
+  flex-shrink: 0;
 }
 
 #mascot-stage {
   position: fixed;
   z-index: calc(var(--z-player) + 1);
-  left: calc(14px + env(safe-area-inset-left));
+  left: calc(var(--shell-inset) + env(safe-area-inset-left));
   bottom: calc(36px + env(safe-area-inset-bottom));
   display: grid;
-  width: 70px;
+  width: var(--sidebar-width);
   height: 70px;
-  place-items: center;
+  align-items: center;
+  justify-items: start;
   pointer-events: none;
+  transition: width 180ms ease;
 }
 
 #mascot-stage.is-hidden {
@@ -2781,6 +2879,7 @@ svg {
 }
 
 #mascot-slot {
+  margin-left: 3px;
   width: 64px;
   height: 64px;
 }
@@ -3142,7 +3241,7 @@ svg {
   left: 74px;
   bottom: 18px;
   width: max-content;
-  max-width: 180px;
+  max-width: min(180px, max(0px, calc(var(--sidebar-width) - 86px)));
   padding: 8px 10px;
   border: 0.5px solid var(--line);
   border-radius: 12px;
@@ -3163,6 +3262,21 @@ svg {
   display: block !important;
   opacity: 0;
   transform: translateY(4px);
+  pointer-events: none;
+}
+
+:root[data-sidebar-collapsed="true"] #mascot-stage {
+  justify-items: center;
+}
+
+:root[data-sidebar-collapsed="true"] #mascot-slot {
+  margin-left: 0;
+}
+
+/* Visibility remains hidden even when the mascot's [hidden] rule sets display. */
+:root[data-sidebar-collapsed="true"] #mascot-bubble {
+  visibility: hidden;
+  opacity: 0;
   pointer-events: none;
 }
 
@@ -4089,19 +4203,8 @@ input[type="range"]::-webkit-slider-thumb {
   grid-template-columns: 48px minmax(0, 1fr) 48px;
 }
 
+/* 保留沉浸页原有的 1080px 行为；新的紧凑档只作用于底部播放条。 */
 @media (max-width: 1080px) {
-  .app-shell {
-    grid-template-columns: 220px minmax(0, 1fr);
-  }
-
-  .player-bar {
-    left: 248px;
-    /* 左 / 中 / 右：左栏至少 170px，中栏固定 300px，右栏优先分配余量。 */
-    grid-template-columns: minmax(170px, 0.8fr) 300px minmax(170px, 1fr);
-    gap: 12px;
-    padding-inline: 18px;
-  }
-
   .timeline {
     width: 300px;
   }
@@ -4109,11 +4212,31 @@ input[type="range"]::-webkit-slider-thumb {
   .transport-controls {
     gap: 11px;
   }
+}
 
-  .right-tools {
-    gap: 6px;
+@media (max-width: 1200px) {
+  .player-bar {
+    /* 右栏按内容保留空间；进度区先收缩，超长计数才换行。 */
+    grid-template-columns: minmax(100px, 0.8fr) minmax(222px, 300px) minmax(max-content, 1fr);
+    gap: 12px;
+    padding-inline: 18px;
   }
 
+  .player-bar .transport-controls {
+    gap: 11px;
+  }
+
+  .player-bar .right-tools {
+    /* 42px 外侧 + 38px 内边距/边框 + 24px 间距 + 100px 左栏 + 222px 中栏。 */
+    max-width: calc(100vw - var(--sidebar-width) - 426px);
+    gap: 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root :is(.app-shell, #sidebar, #sidebar-toggle svg, #sidebar-resize, .player-bar, #mascot-stage) {
+    transition: none;
+  }
 }
 
 @media (max-width: 980px) {
