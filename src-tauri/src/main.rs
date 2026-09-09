@@ -184,6 +184,10 @@ async fn prepare_audio(
             duration_seconds: duration_seconds.map(|value| value.max(0.0).round() as u64),
         };
         let source = *state.stream_source.read().await;
+        eprintln!(
+            "[prepare_audio] begin {bv_id} cid={cid:?} source={}",
+            source.as_str()
+        );
         let info = match source {
             StreamSource::Auto => {
                 match state
@@ -239,6 +243,12 @@ async fn prepare_audio(
             }
         };
 
+        if info.muxed_preview {
+            eprintln!(
+                "[prepare_audio] {bv_id}: no DASH audio for guest (fresh upload?), using muxed durl stream"
+            );
+        }
+
         if !state.resolver.is_current(job_id) {
             return Err(AUDIO_RESOLUTION_CANCELLED.to_owned());
         }
@@ -247,6 +257,7 @@ async fn prepare_audio(
             format!("{} returned an invalid audio URL: {error}", source.as_str())
         })?;
         validate_cdn_url(&upstream_url)?;
+        let upstream_host = upstream_url.host_str().unwrap_or("?").to_owned();
 
         let token = Uuid::new_v4().simple().to_string();
         let now = Instant::now();
@@ -269,6 +280,10 @@ async fn prepare_audio(
             .strip_prefix("http://")
             .map(|url| format!("https://{url}"))
             .unwrap_or(info.thumbnail_url);
+        eprintln!(
+            "[prepare_audio] resolved {bv_id} muxed={} host={upstream_host}",
+            info.muxed_preview
+        );
 
         Ok(AudioResponse {
             audio_url: format!("{}/audio/{token}", state.proxy_base_url),
@@ -506,6 +521,7 @@ async fn proxy_audio(
         return empty_response(StatusCode::GONE);
     }
 
+    let upstream_host = entry.url.host_str().unwrap_or("?").to_owned();
     let mut upstream_request = state
         .client
         .request(method.clone(), entry.url)
@@ -517,10 +533,19 @@ async fn proxy_audio(
 
     let upstream = match upstream_request.send().await {
         Ok(response) => response,
-        Err(_) => return empty_response(StatusCode::BAD_GATEWAY),
+        Err(error) => {
+            eprintln!("[audio-proxy] upstream request failed: {error}");
+            return empty_response(StatusCode::BAD_GATEWAY);
+        }
     };
 
     let status = upstream.status();
+    if !(status.is_success() || status.as_u16() == 206) {
+        eprintln!(
+            "[audio-proxy] upstream returned HTTP {} for {}",
+            status.as_u16(), upstream_host
+        );
+    }
     let mut response = Response::builder()
         .status(status)
         .header(ACCESS_CONTROL_ALLOW_ORIGIN, "*")
@@ -530,7 +555,6 @@ async fn proxy_audio(
             "Accept-Ranges, Content-Length, Content-Range, Content-Type, ETag, Last-Modified",
         );
     for name in [
-        CONTENT_TYPE,
         CONTENT_LENGTH,
         CONTENT_RANGE,
         ETAG,
@@ -541,6 +565,30 @@ async fn proxy_audio(
             response = response.header(name, value);
         }
     }
+
+    // 部分B站CDN节点对音轨返回 application/octet-stream；macOS WKWebView
+    // 拒绝把该类型当作媒体解码（表现为时间停在0、无进度）。本代理只服务
+    // B站音频流（MP4 容器），遇到八进制流或缺失类型时改写为 audio/mp4。
+    let upstream_content_type = upstream
+        .headers()
+        .get(CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .unwrap_or("");
+    let normalized_content_type = if upstream_content_type.is_empty()
+        || upstream_content_type.eq_ignore_ascii_case("application/octet-stream")
+    {
+        if !upstream_content_type.is_empty() {
+            eprintln!(
+                "[audio-proxy] normalized content-type '{}' to audio/mp4 for {upstream_host}",
+                upstream_content_type
+            );
+        }
+        "audio/mp4"
+    } else {
+        upstream_content_type
+    };
+    response = response.header(CONTENT_TYPE, normalized_content_type);
 
     let body = if method == Method::HEAD {
         Body::empty()

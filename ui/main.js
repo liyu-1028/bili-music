@@ -2543,7 +2543,7 @@ async function loadCurrentTrack({
     }
 
     if (advancePageWithinCurrentBv({ automatic: true, skipFailed: true })) {
-      showPlaybackNotice("璇ュ垎 P 鏃犳硶鎾斁锛屽凡鑷姩璺宠繃銆?");
+      showPlaybackNotice("该分P无法播放，已自动跳过。");
       return;
     }
 
