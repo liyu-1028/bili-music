@@ -771,10 +771,12 @@ mod import_tests {
         let before = fs::read(&path).unwrap();
         let error = add_to_playlist_at(&path, "不存在".into(), input("BV1rW4y1Q7o7")).unwrap_err();
         assert!(error.contains("不存在"));
-        let playlists = add_to_playlist_at(&path, created.id.clone(), input("BV1rW4y1Q7o7")).unwrap_err();
+        let playlists =
+            add_to_playlist_at(&path, created.id.clone(), input("BV1rW4y1Q7o7")).unwrap_err();
         assert!(playlists.contains("歌曲已在歌单“歌单”中"));
         // 大小写不同的 BV 号也应视为重复。
-        let error = add_to_playlist_at(&path, created.id.clone(), input("BV1RW4Y1Q7O7")).unwrap_err();
+        let error =
+            add_to_playlist_at(&path, created.id.clone(), input("BV1RW4Y1Q7O7")).unwrap_err();
         assert!(error.contains("歌曲已在歌单"));
         assert_eq!(fs::read(&path).unwrap(), before);
         add_to_playlist_at(&path, created.id, input("BV1cs411f7ZC")).unwrap();
